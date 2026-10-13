@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: realmforge
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NODE_ENV
+        value: production
+      # Optional: set ADMIN_KEY in the Render dashboard to enable /admin commands in production
