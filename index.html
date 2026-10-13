@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Realmforge</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="stats">
+    <div class="bar hp"><div id="hpfill"></div><span id="hptext"></span></div>
+    <div class="bar xp"><div id="xpfill"></div><span id="lvtext"></span></div>
+  </div>
+  <div id="hotbar"></div>
+  <div id="side">
+    <div id="lb"></div>
+    <canvas id="minimap" width="160" height="160"></canvas>
+    <div id="info"></div>
+  </div>
+  <div id="bossbar" class="hidden"><div id="bossname"></div><div class="bar boss"><div id="bossfill"></div></div></div>
+  <div id="chat"><div id="chatlog"></div><input id="chatinput" maxlength="140" placeholder="Press Enter to chat — /help" autocomplete="off"></div>
+  <div id="inv" class="panel hidden"><h3>Inventory <small>click to move · right-click to drop</small></h3><div id="invgrid"></div></div>
+  <div id="craft" class="panel hidden"><h3>Crafting <small>(C)</small></h3><input id="craftsearch" placeholder="Search recipes..." autocomplete="off"><div id="craftlist"></div></div>
+  <div id="tip" class="hidden"></div>
+  <div id="dead" class="hidden"><h1>You died</h1><p id="deadby"></p><p id="deadtimer"></p></div>
+  <div id="help">WASD move · Mouse aim/attack · Space dash · 1-9 / wheel select · F use · I inventory · C craft · Enter chat</div>
+</div>
+
+<div id="menu">
+  <div class="card">
+    <h1 id="title">REALMFORGE</h1>
+    <p class="sub">Gather. Craft. Slay. Thousands of weapons. Dozens of bosses. Secrets everywhere.</p>
+    <input id="name" maxlength="16" placeholder="Your name" autocomplete="off">
+    <button id="play">PLAY</button>
+    <p id="menumsg"></p>
+    <p class="tiny">WASD move · Mouse aim &amp; hold to attack · Space dash · F use item · C craft · I inventory</p>
+  </div>
+</div>
+
+<script src="/shared/worldgen.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
