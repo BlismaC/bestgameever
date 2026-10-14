@@ -22,6 +22,7 @@ module.exports = function handle(game, p, text) {
     case 'find': { const q = (args.join(' ') || '').toLowerCase(); const r = Object.values(content.items).filter((i) => i.id.includes(q) || i.name.toLowerCase().includes(q)).slice(0, 8).map((i) => i.id); sys(r.length ? r.join(', ') : 'No matches'); return true; }
     case 'boss': case 'mob': { const id = args[0]; if (!content.mobs[id]) { sys('Unknown mob: ' + Object.keys(content.mobs).join(', ')); return true; } const n = Math.min(20, parseInt(args[1] || '1', 10)); for (let i = 0; i < n; i++) game.spawnMob(id, p.x + 300 * Math.cos(p.angle) + Math.random() * 60, p.y + 300 * Math.sin(p.angle) + Math.random() * 60); return true; }
     case 'tp': p.x = +args[0] || p.x; p.y = +args[1] || p.y; return true;
+    case 'zone': sys('Zone ' + game.world.zone(p.x, p.y).toFixed(2) + ' biome ' + game.world.biomeAt(p.x, p.y)); return true;
     case 'heal': p.hp = p.maxHp; return true;
     case 'xp': game.giveXp(p, parseInt(args[0] || '100', 10)); return true;
     case 'stats': sys(JSON.stringify(content.stats()) + ` mobs:${game.mobs.size} proj:${game.projectiles.length}`); return true;

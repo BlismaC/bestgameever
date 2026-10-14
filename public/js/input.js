@@ -26,7 +26,9 @@ export function init() {
     else if (e.key === 'Enter') { ui.openChat(); e.preventDefault(); }
     else if (k >= '1' && k <= '9') { select(+k - 1); }
     else if (k === 'f') send({ t: 'use' });
-    else if (k === 'i') ui.toggle('inv');
+    else if (k === 'i' || k === 'e') ui.toggle('inv');
+    else if (k === 'm') ui.toggle('map');
+    else if (k === 'x') send({ t: 'pickup' });
     else if (k === 'c') { ui.toggle('craft'); e.preventDefault(); }
     else if (k === 'escape') ui.closePanels();
   });

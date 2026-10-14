@@ -2,6 +2,7 @@ import { S } from './state.js';
 import * as A from './assets.js';
 import * as FX from './fx.js';
 import cfgA from './assetcfg.js';
+import { nearRes } from './world.js';
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
@@ -158,7 +159,7 @@ function drawMob(m, t) {
   const img = A.mob(m.type);
   if (img) {
     const mode = cfgA.overrides[m.type] || cfgA.mode, h = R * 2 * (cfgA.scale[m.type] || 1.15), w = h * img.width / img.height;
-    if (mode === 'flip') { if (Math.cos(a) < 0) ctx.scale(-1, 1); } else ctx.rotate(a);
+    if (mode === 'flip') { if (Math.cos(a) < 0) ctx.scale(-1, 1); } else if (mode !== 'fixed') ctx.rotate(a);
     ctx.drawImage(img, -w / 2, -h / 2, w, h);
     if (m.flash > 0) { ctx.globalAlpha = m.flash * 0.75; ctx.drawImage(A.silhouette(img, 'm' + m.type), -w / 2, -h / 2, w, h); ctx.globalAlpha = 1; }
   } else {
@@ -228,6 +229,41 @@ function drawPlayer(p, self, t) {
   }
 }
 
+
+// ---------------------------------------------------------------- structures
+function structBody(type, d0, x, y, t, alpha, id) {
+  const R = d0.r, col = d0.c;
+  ctx.globalAlpha = alpha;
+  const img = A.struct(type);
+  if (img) { const h = R * 2.5, w = h * img.width / img.height; ctx.drawImage(img, x - w / 2, y - h / 2 - R * 0.15, w, h); ctx.globalAlpha = 1; return; }
+  switch (d0.t) {
+    case 'station': ctx.fillStyle = shade(col, -0.25); ctx.beginPath(); ctx.roundRect(x - R, y - R * 0.8, R * 2, R * 1.7, 8); ctx.fill(); ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(x - R, y - R, R * 2, R * 1.6, 8); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.stroke(); emoji(d0.e, x, y - R * 0.2, R * 1.1); break;
+    case 'wall': ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(x - R, y - R, R * 2, R * 2, 6); ctx.fill(); ctx.strokeStyle = shade(col, -0.35); ctx.lineWidth = 2; for (const k of [-0.33, 0.33]) { ctx.beginPath(); ctx.moveTo(x - R, y + R * k); ctx.lineTo(x + R, y + R * k); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(x, y - R); ctx.lineTo(x, y - R * 0.33); ctx.moveTo(x - R * 0.5, y - R * 0.33); ctx.lineTo(x - R * 0.5, y + R * 0.33); ctx.moveTo(x + R * 0.5, y - R * 0.33); ctx.lineTo(x + R * 0.5, y + R * 0.33); ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.beginPath(); ctx.roundRect(x - R, y - R, R * 2, R * 2, 6); ctx.stroke(); break;
+    case 'spike': ctx.fillStyle = shade(col, -0.3); ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.fill(); ctx.fillStyle = col; for (let i = 0; i < 8; i++) { const a = i * TAU / 8; ctx.beginPath(); ctx.moveTo(x + Math.cos(a - 0.3) * R * 0.5, y + Math.sin(a - 0.3) * R * 0.5); ctx.lineTo(x + Math.cos(a) * R * 1.12, y + Math.sin(a) * R * 1.12); ctx.lineTo(x + Math.cos(a + 0.3) * R * 0.5, y + Math.sin(a + 0.3) * R * 0.5); ctx.fill(); } ctx.fillStyle = shade(col, 0.3); ctx.beginPath(); ctx.arc(x, y, R * 0.28, 0, TAU); ctx.fill(); break;
+    case 'trap': ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, R * 0.75, 0, TAU); ctx.stroke(); ctx.fillStyle = shade(col, -0.2); for (let i = 0; i < 10; i++) { const a = i * TAU / 10; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * R * 0.75, y + Math.sin(a) * R * 0.75); ctx.lineTo(x + Math.cos(a + 0.15) * R * 0.3, y + Math.sin(a + 0.15) * R * 0.3); ctx.lineTo(x + Math.cos(a + 0.3) * R * 0.75, y + Math.sin(a + 0.3) * R * 0.75); ctx.fill(); } break;
+    case 'fire': { ctx.fillStyle = '#5a3b20'; for (const a of [0.5, 2.1, 3.7]) { ctx.save(); ctx.translate(x, y + 6); ctx.rotate(a); ctx.fillRect(-R * 0.9, -3, R * 1.8, 6); ctx.restore(); }
+      const fl = 1 + Math.sin(t * 12 + (id || 0)) * 0.12; ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.moveTo(x - R * 0.45, y + 6); ctx.quadraticCurveTo(x - R * 0.2, y - R * 1.0 * fl, x, y - R * 1.15 * fl); ctx.quadraticCurveTo(x + R * 0.3, y - R * 0.5, x + R * 0.45, y + 6); ctx.fill(); ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(x - R * 0.22, y + 6); ctx.quadraticCurveTo(x, y - R * 0.7 * fl, x + R * 0.22, y + 6); ctx.fill(); break; }
+    default: ball(x, y, R, col);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawStruct(st, d0, t) {
+  const hit = S.structHit.get(st.id); let sx = 0;
+  if (hit && hit.t < 0.15) sx = Math.sin(hit.t * 90) * 2.5 * (1 - hit.t / 0.15);
+  if (d0.t !== 'trap' && d0.t !== 'fire') shadow(st.x, st.y, d0.r);
+  structBody(st.type, d0, st.x + sx, st.y, t, 1, st.id);
+  if (hit && hit.t < 0.1) { ctx.globalAlpha = 0.3; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(st.x, st.y, d0.r, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
+  if (st.hp < st.max) hpBar(st.x, st.y + d0.r + 6, Math.max(36, d0.r * 1.6), st.hp / st.max, '#e0a23a');
+  if (st.owner === S.id && d0.t === 'station') { ctx.font = '600 10px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillText(d0.n, st.x, st.y + d0.r + 20); }
+}
+function drawGhost(g, t, me) {
+  const d0 = S.content.structures[g.type]; if (!d0) return;
+  ctx.setLineDash([10, 10]); ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(me.x, me.y, S.cfg.build, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  structBody(g.type, d0, g.x, g.y, t, 0.62, 0);
+  ctx.globalAlpha = 0.5; ctx.fillStyle = g.ok ? 'rgba(80,255,120,.35)' : 'rgba(255,60,60,.45)'; ctx.strokeStyle = g.ok ? '#6dff8a' : '#ff5a5a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, TAU); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1;
+  if (d0.hr) { ctx.strokeStyle = 'rgba(255,160,60,.4)'; ctx.beginPath(); ctx.arc(g.x, g.y, d0.hr, 0, TAU); ctx.stroke(); }
+}
+
 // ---------------------------------------------------------------- main render
 export function render(dt, t, me, myAngle, myHeld, lead) {
   const w = innerWidth, h = innerHeight;
@@ -262,16 +298,23 @@ export function render(dt, t, me, myAngle, myHeld, lead) {
     ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(d[3], d[4] + 14, 11, 4, 0, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'lighter'; const gg = ctx.createRadialGradient(d[3], d[4] + bob, 2, d[3], d[4] + bob, 22); gg.addColorStop(0, rgba(it.c, 0.5)); gg.addColorStop(1, rgba(it.c, 0)); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(d[3], d[4] + bob, 22, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
     const ws = it.w ? A.weapon(d[1]) : A.get('items/' + d[1]);
-    if (ws) { const src = ws.src || ws, sz = 30; ctx.drawImage(src, d[3] - sz / 2, d[4] + bob - sz / 2, sz * src.width / src.height, sz); } else emoji(it.e, d[3], d[4] + bob, 22);
+    if (ws) { const src = it.w ? ws.src : ws, sz = 30; ctx.drawImage(src, d[3] - sz / 2, d[4] + bob - sz / 2, sz * src.width / src.height, sz); } else emoji(it.e, d[3], d[4] + bob, 22);
     if (d[2] > 1) { ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeText(d[2], d[3] + 13, d[4] + 15 + bob); ctx.fillText(d[2], d[3] + 13, d[4] + 15 + bob); }
   }
 
   // y-sorted world
-  const ents = [];
-  for (const r of S.res) {
-    if (!r.alive || r.x < x0 - 80 || r.x > x1 + 80 || r.y < y0 - 80 || r.y > y1 + 120) continue;
+  const ents = [], under = [];
+  nearRes(cam.x, cam.y, Math.hypot(vw, vh) + 60, (r) => {
+    if (!r.alive || r.x < x0 - 80 || r.x > x1 + 80 || r.y < y0 - 80 || r.y > y1 + 120) return;
     const def = S.content.nodes[r.type]; if (def) ents.push([r.y, () => drawNode(r, def, t)]);
+  });
+  const lights = [];
+  for (const st of S.structs.values()) {
+    const d0 = S.content.structures[st.type]; if (!d0 || st.x < x0 - 80 || st.x > x1 + 80 || st.y < y0 - 80 || st.y > y1 + 80) continue;
+    if (d0.t === 'fire') lights.push(st);
+    if (d0.t === 'trap' || d0.t === 'fire') under.push(() => drawStruct(st, d0, t)); else ents.push([st.y, () => drawStruct(st, d0, t)]);
   }
+  for (const f of under) f();
   for (const m of S.mobs.values()) ents.push([m.y, () => drawMob(m, t)]);
   for (const p of S.players.values()) ents.push([p.y, () => drawPlayer(p, false, t)]);
   if (!S.dead) ents.push([me.y, () => drawPlayer({ id: S.id, x: me.x, y: me.y, angle: myAngle, held: myHeld, fl: 0, dash: t < me.dashUntil, sp: me.sp, ph: me.ph }, true, t)]);
@@ -287,6 +330,7 @@ export function render(dt, t, me, myAngle, myHeld, lead) {
     ctx.restore();
   }
 
+  if (S.ghost) drawGhost(S.ghost, t, me);
   FX.draw(ctx);
 
   // popups & telegraphs
@@ -309,6 +353,15 @@ export function render(dt, t, me, myAngle, myHeld, lead) {
     const g = ctx.createRadialGradient(w / 2, h / 2, 90 * scale, w / 2, h / 2, 560 * scale);
     g.addColorStop(0, `rgba(5,8,34,${dk * 0.22})`); g.addColorStop(1, `rgba(5,8,34,${dk})`);
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  }
+  if (lights.length) {
+    ctx.globalCompositeOperation = 'lighter';
+    for (const st of lights) {
+      const sx = (st.x - cam.x) * scale + w / 2, sy = (st.y - cam.y) * scale + h / 2, rr = (230 + Math.sin(t * 9 + st.id) * 12) * scale;
+      const g = ctx.createRadialGradient(sx, sy, 4, sx, sy, rr); g.addColorStop(0, `rgba(255,170,70,${0.12 + dk * 0.55})`); g.addColorStop(1, 'rgba(255,120,30,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, rr, 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
   }
   // damage flash + low hp vignette
   if (me.flash > 0) { ctx.fillStyle = `rgba(255,0,0,${me.flash * 0.22})`; ctx.fillRect(0, 0, w, h); }

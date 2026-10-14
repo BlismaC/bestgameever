@@ -31,26 +31,25 @@ class World {
     let a = this.cells.get(k); if (!a) { a = []; this.cells.set(k, a); }
     a.push(r);
   }
+  zone(x, y) { return this.gen.zoneAt(x, y); }
+  // Jittered grid: one candidate per cell, filled by biome density -> evenly spread, no clumps, deterministic per seed.
   generate() {
     const rng = mulberry32(this.seed * 7 + 1);
-    const pad = 120, cx = this.size / 2, cy = this.size / 2;
-    let attempts = 0;
-    while (this.res.length < C.RESOURCE_COUNT && attempts++ < C.RESOURCE_COUNT * 6) {
-      const x = pad + rng() * (this.size - pad * 2), y = pad + rng() * (this.size - pad * 2);
-      const dx = x - cx, dy = y - cy;
-      if (dx * dx + dy * dy < 160 * 160) continue; // keep the spawn point clear
-      const b = content.biomes[this.biomeAt(x, y)];
-      let total = 0; for (const w of Object.values(b.resources)) total += w;
-      let roll = rng() * total, type = null;
-      for (const [k, w] of Object.entries(b.resources)) { roll -= w; if (roll <= 0) { type = k; break; } }
-      if (!type) continue;
-      const def = content.nodes[type];
-      let blocked = false;
-      this.near(x, y, def.radius + 80, (o) => {
-        const ddx = o.x - x, ddy = o.y - y, min = o.r + def.radius + 16;
-        if (ddx * ddx + ddy * ddy < min * min) blocked = true;
-      });
-      if (blocked) continue;
+    const CELLG = C.RESOURCE_CELL, n = Math.floor(this.size / CELLG), cx = this.size / 2, cy = this.size / 2;
+    for (let gy = 0; gy < n; gy++) for (let gx = 0; gx < n; gx++) {
+      const bx = (gx + 0.5) * CELLG, by = (gy + 0.5) * CELLG;
+      const dx = bx - cx, dy = by - cy;
+      if (dx * dx + dy * dy < 320 * 320) continue; // clear spawn
+      const b = content.biomes[this.biomeAt(bx, by)];
+      if (rng() > b.density) continue;
+      const zone = this.zone(bx, by);
+      let total = 0; const opts = [];
+      for (const [k, w] of Object.entries(b.resources)) { if ((content.nodes[k].minZone || 0) > zone) continue; opts.push([k, w]); total += w; }
+      if (!total) continue;
+      let roll = rng() * total, type = opts[0][0];
+      for (const [k, w] of opts) { roll -= w; if (roll <= 0) { type = k; break; } }
+      const def = content.nodes[type], m = def.radius + 10;
+      const x = gx * CELLG + m + rng() * (CELLG - 2 * m), y = gy * CELLG + m + rng() * (CELLG - 2 * m);
       const r = { id: this.res.length, type, x: Math.round(x), y: Math.round(y), r: def.radius, hp: def.hp, maxHp: def.hp, alive: true, respawnAt: 0, solid: def.solid !== false };
       this.res.push(r); this.addToCells(r);
     }

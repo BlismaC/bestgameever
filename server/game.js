@@ -5,6 +5,7 @@ const content = require('./content');
 const World = require('./world');
 const easter = require('./easter');
 const runCommand = require('./commands');
+const Grid = require('./grid');
 
 let NID = 1;
 const nid = () => NID++;
@@ -37,6 +38,7 @@ class Game {
     this.nextBossAt = C.BOSS_INTERVAL;
     this.spawnTimer = 0; this.despawnTimer = 0; this.lbTimer = 0; this.resTimer = 0;
     this.resPendingEvents = [];
+    this.structs = new Grid(220); this.structMap = new Map(); this.active = []; this.mobGrid = new Grid(240); this.tickN = 0;
   }
 
   isNight() { return Math.cos(2 * Math.PI * (this.dayTime - 0.25)) < -0.2; }
@@ -57,8 +59,7 @@ class Game {
     this.spawnPlayer(p);
     this.send(p, {
       t: 'init', id: p.id, seed: C.SEED, size: this.size, name: C.GAME_NAME,
-      cfg: { tick: C.TICK_RATE, speed: P.speed, dashSpeed: P.dashSpeed, dashTime: P.dashTime, dashCooldown: P.dashCooldown, radius: P.radius, hotbar: P.hotbar, invSize: P.invSize, safe: C.SAFE_RADIUS, view: C.VIEW_RADIUS },
-      rt: this.world.nodeTypes, rs: this.world.res.map((r) => [this.world.nodeTypes.indexOf(r.type), r.x, r.y]),
+      cfg: { build: C.BUILD_RANGE, craft: C.CRAFT_RANGE, tick: C.TICK_RATE, speed: P.speed, dashSpeed: P.dashSpeed, dashTime: P.dashTime, dashCooldown: P.dashCooldown, radius: P.radius, hotbar: P.hotbar, invSize: P.invSize, safe: C.SAFE_RADIUS, view: C.VIEW_RADIUS },
       dep: this.world.res.filter((r) => !r.alive).map((r) => r.id),
     });
     this.sendInv(p);
@@ -96,6 +97,8 @@ class Game {
       case 'swap': { const a = m.a | 0, b = m.b | 0, n = p.inv.length; if (a >= 0 && b >= 0 && a < n && b < n) { const t = p.inv[a]; p.inv[a] = p.inv[b]; p.inv[b] = t; this.sendInv(p); } break; }
       case 'drop': { const i = m.i | 0; const s = p.inv[i]; if (s) { this.spawnDrop(s.id, s.count, p.x + Math.cos(p.angle) * 50, p.y + Math.sin(p.angle) * 50, 1.5); p.inv[i] = null; this.sendInv(p); } break; }
       case 'dash': this.dash(p); break;
+      case 'place': this.place(p, +m.x, +m.y); break;
+      case 'pickup': this.pickupStruct(p); break;
       case 'chat': this.chat(p, String(m.m || '')); break;
       case 'ping': this.send(p, { t: 'pong', n: m.n }); break;
     }
@@ -134,6 +137,7 @@ class Game {
   }
   craft(p, id) {
     const r = content.recipes[id]; if (!r || !p.alive) return;
+    if (r.station && !this.nearStation(p, r.station)) { this.sys(p, `Requires a ${content.structures[r.station].name} nearby.`); return; }
     for (const [k, n] of Object.entries(r.cost)) if (this.countItem(p, k) < n) { this.sys(p, 'Missing materials.'); return; }
     for (const [k, n] of Object.entries(r.cost)) this.removeItem(p, k, n);
     const left = this.addItem(p, r.out, r.count);
@@ -169,10 +173,11 @@ class Game {
     const d = { id: nid(), item, count, x: x + rand(-18, 18), y: y + rand(-18, 18), at: this.time + delay, expires: this.time + 120 };
     this.drops.set(d.id, d);
   }
-  rollDrops(table, x, y, mul = 1) {
+  rollDrops(table, x, y, mul = 1, zone = 0) {
+    const bump = Math.floor(zone * 2);
     for (const e of table || []) {
       if (Math.random() > (e.chance === undefined ? 1 : e.chance)) continue;
-      if (e.roll === 'weapon') { const w = content.randomWeapon(e.tier[0], e.tier[1], e.mods); if (w) this.spawnDrop(w, 1, x, y); }
+      if (e.roll === 'weapon') { const w = content.randomWeapon(Math.min(7, e.tier[0] + bump), Math.min(7, e.tier[1] + bump), e.mods); if (w) this.spawnDrop(w, 1, x, y); }
       else { const n = randi(e.min === undefined ? 1 : e.min, e.max === undefined ? 1 : e.max) * mul; if (n > 0) this.spawnDrop(e.item, n, x, y); }
     }
   }
@@ -186,7 +191,10 @@ class Game {
       nextAtk: 0, wanderUntil: 0, wa: 0, kvx: 0, kvy: 0, fleeUntil: 0, fleeFrom: null, lastHit: 0,
       boss: !!def.boss, pat: (def.patterns || []).map(() => this.time + rand(2, 4)), phase: 0, shiny: false, dmgMul: 1, dropMul: 1, idle: 0,
     };
-    if (!def.boss && !opts.noShiny && Math.random() < C.SHINY_CHANCE) { m.shiny = true; m.maxHp = m.hp = def.hp * 2; m.dmgMul = 1.5; m.dropMul = 3; }
+    const z = this.world.zone(x, y); m.zone = z; m.xpMul = 1 + z * 1.5;
+    if (def.boss) { m.maxHp = m.hp = Math.round(def.hp * (1 + z * 0.6)); m.dmgMul = 1 + z * 0.4; }
+    else { m.maxHp = m.hp = Math.round(def.hp * (1 + z * 2.2)); m.dmgMul = 1 + z * 1.2; }
+    if (!def.boss && !opts.noShiny && Math.random() < C.SHINY_CHANCE) { m.shiny = true; m.maxHp = m.hp = m.hp * 2; m.dmgMul *= 1.5; m.dropMul = 3; }
     this.mobs.set(m.id, m);
     return m;
   }
@@ -202,10 +210,10 @@ class Game {
   }
   killMob(m) {
     this.mobs.delete(m.id);
-    this.rollDrops(m.def.drops, m.x, m.y, m.dropMul);
+    this.rollDrops(m.def.drops, m.x, m.y, m.dropMul, m.zone || 0);
     const killer = this.players.get(m.lastHit);
     if (killer) {
-      this.giveXp(killer, Math.round((m.def.xp || 5) * (m.shiny ? 3 : 1))); killer.kills++;
+      this.giveXp(killer, Math.round((m.def.xp || 5) * (m.xpMul || 1) * (m.shiny ? 3 : 1))); killer.kills++;
       easter.onKill(this, killer, m);
       if (m.shiny) this.sys(killer, '✨ You slew a shiny ' + m.def.name + '!');
     }
@@ -297,6 +305,12 @@ class Game {
         if (w.fx && w.fx.lifesteal) p.hp = Math.min(p.maxHp, p.hp + dd * w.fx.lifesteal);
       }
     }
+    // structures
+    this.structs.near(p.x, p.y, m.range + 70, (st) => {
+      if (!inArc(st.x, st.y, st.r)) return;
+      const gk = st.def.kind === 'wood' ? 'tree' : st.def.kind === 'stone' ? 'rock' : 'ore';
+      this.hurtStruct(st, Math.max(1, w.dmg * (w.gather[gk] !== undefined ? w.gather[gk] : 0.3) * 2));
+    });
     // resource nodes
     this.world.near(p.x, p.y, m.range + 60, (r) => {
       if (!r.alive || !inArc(r.x, r.y, r.r)) return;
@@ -374,6 +388,87 @@ class Game {
     this.projectiles = out;
   }
 
+  // ------------------------------------------------------------ structures
+  nearStation(p, type) {
+    let ok = false;
+    this.structs.near(p.x, p.y, C.CRAFT_RANGE, (s) => { if (!ok && s.def.provides === type && dist(p.x, p.y, s.x, s.y) <= C.CRAFT_RANGE) ok = true; });
+    return ok;
+  }
+  place(p, x, y) {
+    if (!p.alive || !isFinite(x) || !isFinite(y)) return;
+    const slot = p.inv[p.sel]; const sd = slot && content.structures[slot.id]; if (!sd) return;
+    if (this.time < (p.nextPlace || 0)) return; p.nextPlace = this.time + 0.2;
+    if (dist(p.x, p.y, x, y) > C.BUILD_RANGE + 20) return;
+    if (x < 60 || y < 60 || x > this.size - 60 || y > this.size - 60) return;
+    if (this.inSafe(x, y)) { this.sys(p, "You can't build in the safe zone."); return; }
+    if ((p.structCount || 0) >= C.MAX_STRUCTS_PER_PLAYER) { this.sys(p, 'Build limit reached (' + C.MAX_STRUCTS_PER_PLAYER + ').'); return; }
+    let bad = false;
+    this.world.near(x, y, sd.r + 90, (n) => { if (n.alive && n.solid && dist(x, y, n.x, n.y) < sd.r + n.r * 0.8) bad = true; });
+    this.structs.near(x, y, sd.r + 90, (o) => { if (dist(x, y, o.x, o.y) < sd.r + o.r - 8) bad = true; });
+    if (sd.solid) for (const o of this.players.values()) if (o.alive && dist(x, y, o.x, o.y) < sd.r + C.PLAYER.radius) bad = true;
+    if (bad) return;
+    const st = { id: nid(), type: slot.id, def: sd, x: Math.round(x), y: Math.round(y), r: sd.r, hp: sd.hp, maxHp: sd.hp, owner: p.id, ownerName: p.name, next: 0, armedAt: 0 };
+    this.structs.add(st); this.structMap.set(st.id, st);
+    if (sd.type === 'spike' || sd.type === 'trap' || sd.type === 'fire') this.active.push(st);
+    p.structCount = (p.structCount || 0) + 1;
+    slot.count--; if (slot.count <= 0) p.inv[p.sel] = null; this.sendInv(p);
+    this.events.push({ e: 'sadd', x: st.x, y: st.y, s: [st.id, st.type, st.x, st.y, st.hp, st.maxHp, st.owner] });
+  }
+  removeStruct(st) {
+    this.structs.remove(st); this.structMap.delete(st.id);
+    const i = this.active.indexOf(st); if (i >= 0) { this.active[i] = this.active[this.active.length - 1]; this.active.pop(); }
+    const o = this.players.get(st.owner); if (o) o.structCount = Math.max(0, (o.structCount || 1) - 1);
+    this.events.push({ e: 'sdel', x: st.x, y: st.y, id: st.id });
+  }
+  hurtStruct(st, amount) {
+    st.hp -= amount;
+    this.events.push({ e: 'shit', x: st.x, y: st.y, id: st.id, hp: Math.max(0, Math.round(st.hp)), max: st.maxHp });
+    if (st.hp <= 0) this.removeStruct(st);
+  }
+  pickupStruct(p) {
+    if (!p.alive) return;
+    let best = null, bd = 160;
+    this.structs.near(p.x, p.y, 160, (s) => { const d = dist(p.x, p.y, s.x, s.y); if (s.owner === p.id && d < bd) { bd = d; best = s; } });
+    if (!best) return;
+    const left = this.addItem(p, best.type, 1); if (left > 0) return;
+    this.removeStruct(best);
+  }
+  collideStructs(e, radius) {
+    let hit = null;
+    this.structs.near(e.x, e.y, radius + 70, (s) => {
+      if (!s.def.solid) return;
+      const dx = e.x - s.x, dy = e.y - s.y, min = radius + s.r * 0.92, d2 = dx * dx + dy * dy;
+      if (d2 < min * min && d2 > 0.0001) { const d = Math.sqrt(d2), push = (min - d) / d; e.x += dx * push; e.y += dy * push; hit = s; }
+    });
+    return hit;
+  }
+  crushStructs(m) { // bosses smash through bases
+    if (this.time < (m.nextCrush || 0)) return; m.nextCrush = this.time + 0.5;
+    this.structs.near(m.x, m.y, m.r + 60, (s) => { if (dist(m.x, m.y, s.x, s.y) < m.r + s.r) this.hurtStruct(s, 140); });
+  }
+  runStructures(dt) {
+    for (const s of this.active) {
+      const d = s.def;
+      if (d.type === 'fire') {
+        for (const p of this.players.values()) if (p.alive && dist(p.x, p.y, s.x, s.y) < d.healRange) p.hp = Math.min(p.maxHp, p.hp + d.heal * dt);
+      } else if (d.type === 'spike') {
+        if (this.time < s.next) continue;
+        let hit = false;
+        for (const p of this.players.values()) if (p.alive && p.id !== s.owner && dist(p.x, p.y, s.x, s.y) < s.r + C.PLAYER.radius + 6) { this.hurtPlayer(p, d.dmg, d.name); hit = true; }
+        const owner = this.players.get(s.owner);
+        this.mobGrid.near(s.x, s.y, s.r + 80, (m) => { if (m.hp > 0 && dist(m.x, m.y, s.x, s.y) < s.r + m.r + 4) { this.hurtMob(m, d.dmg * (m.boss ? 0.5 : 1), owner); hit = true; } });
+        if (hit) s.next = this.time + 0.7;
+      } else if (d.type === 'trap') {
+        if (this.time < s.armedAt) continue;
+        let tripped = false;
+        for (const p of this.players.values()) if (p.alive && p.id !== s.owner && dist(p.x, p.y, s.x, s.y) < s.r + 12) { p.fx.slow = { until: this.time + d.root, mult: 0.03 }; this.hurtPlayer(p, d.dmg, d.name); tripped = true; }
+        const owner = this.players.get(s.owner);
+        this.mobGrid.near(s.x, s.y, s.r + 40, (m) => { if (!m.boss && m.hp > 0 && dist(m.x, m.y, s.x, s.y) < s.r + 8) { m.fx.slow = { until: this.time + d.root, mult: 0.03 }; this.hurtMob(m, d.dmg, owner); tripped = true; } });
+        if (tripped) { s.armedAt = this.time + d.rearm; this.events.push({ e: 'trap', x: s.x, y: s.y }); }
+      }
+    }
+  }
+
   // ------------------------------------------------------------ mob AI
   updateMob(m, dt) {
     const d = m.def, t = this.time;
@@ -385,6 +480,7 @@ class Game {
     else {
       let target = null;
       if (d.behavior !== 'passive') target = this.nearestPlayer(m.x, m.y, d.aggro || 400);
+      m.hasTarget = !!target;
       if (target) {
         const ang = Math.atan2(target.y - m.y, target.x - m.x), dd = dist(m.x, m.y, target.x, target.y);
         m.angle = ang;
@@ -410,6 +506,8 @@ class Game {
       }
     }
     this.world.collide(m, m.r * 0.6);
+    if (m.boss) this.crushStructs(m);
+    else { const hs = this.collideStructs(m, m.r * 0.6); if (hs && m.hasTarget && t >= (m.nextStruct || 0)) { m.nextStruct = t + 1; this.hurtStruct(hs, (d.dmg || 8) * m.dmgMul * 1.2); } }
   }
   updateBoss(m, dt, slow) {
     const d = m.def, t = this.time;
@@ -424,7 +522,7 @@ class Game {
     const spdMul = (1 + 0.15 * m.phase) * slow;
     if (m.chargeUntil > t) { m.x += Math.cos(m.chargeAng) * d.speed * m.chargeMul * dt; m.y += Math.sin(m.chargeAng) * d.speed * m.chargeMul * dt; }
     else if (dd > m.r + 40) { m.x += Math.cos(ang) * d.speed * spdMul * dt; m.y += Math.sin(ang) * d.speed * spdMul * dt; }
-    for (const p of this.players.values()) if (p.alive && dist(m.x, m.y, p.x, p.y) < m.r + C.PLAYER.radius + 8 && t >= m.nextAtk) { m.nextAtk = t + 0.8; this.hurtPlayer(p, d.dmg, d.name); }
+    for (const p of this.players.values()) if (p.alive && dist(m.x, m.y, p.x, p.y) < m.r + C.PLAYER.radius + 8 && t >= m.nextAtk) { m.nextAtk = t + 0.8; this.hurtPlayer(p, d.dmg * m.dmgMul, d.name); }
     (d.patterns || []).forEach((pat, i) => {
       if (t < m.pat[i]) return;
       m.pat[i] = t + pat.cd * (1 - 0.15 * m.phase) * rand(0.9, 1.1);
@@ -471,7 +569,8 @@ class Game {
         const x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r;
         if (x < 60 || y < 60 || x > this.size - 60 || y > this.size - 60) continue;
         const biome = content.biomes[this.world.biomeAt(x, y)];
-        const type = pickWeighted(biome.mobs, (k) => { const w = content.mobs[k].when || 'any'; if (w === 'night' && !night) return false; if (w === 'day' && night) return false; return true; });
+        const zn = this.world.zone(x, y);
+        const type = pickWeighted(biome.mobs, (k) => { if ((content.mobs[k].minZone || 0) > zn) return false; const w = content.mobs[k].when || 'any'; if (w === 'night' && !night) return false; if (w === 'day' && night) return false; return true; });
         if (!type) continue;
         if (content.mobs[type].behavior !== 'passive' && this.inSafe(x, y)) continue;
         this.spawnMob(type, x, y);
@@ -505,7 +604,7 @@ class Game {
 
   // ------------------------------------------------------------ main tick
   tick(dt) {
-    this.time += dt;
+    this.time += dt; this.tickN++;
     this.dayTime = (this.dayTime + dt / C.DAY_LENGTH) % 1;
     const P = C.PLAYER;
     for (const p of this.players.values()) {
@@ -523,11 +622,13 @@ class Game {
         vx = dx * P.speed * mult; vy = dy * P.speed * mult;
       }
       p.x += vx * dt; p.y += vy * dt;
-      this.world.collide(p, P.radius);
-      if (p.atk && this.time >= p.nextAtk) this.attack(p);
+      this.world.collide(p, P.radius); this.collideStructs(p, P.radius);
+      if (p.atk && this.time >= p.nextAtk) { const sl = p.inv[p.sel]; if (!(sl && content.structures[sl.id])) this.attack(p); }
       if (this.time - p.lastHurt > P.regenDelay && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + P.regen * dt);
     }
     for (const m of [...this.mobs.values()]) this.updateMob(m, dt);
+    this.mobGrid.clear(); for (const m of this.mobs.values()) this.mobGrid.add(m);
+    this.runStructures(dt);
     this.updateProjectiles(dt);
     // drops
     for (const dr of this.drops.values()) {
@@ -570,6 +671,8 @@ class Game {
       for (const m of this.mobs.values()) if (inR(m.x, m.y, p.x, p.y)) ml.push([m.id, m.type, rd(m.x), rd(m.y), Math.round(m.angle * 100) / 100, Math.ceil(m.hp), m.maxHp, this.fxFlags(m) | (m.shiny ? 8 : 0), m.phase]);
       for (const j of this.projectiles) if (inR(j.x, j.y, p.x, p.y)) pr.push([j.id, rd(j.x), rd(j.y), j.r, j.color, j.owner === 'm' ? 1 : 0]);
       for (const d of this.drops.values()) if (inR(d.x, d.y, p.x, p.y)) dr.push([d.id, d.item, d.count, rd(d.x), rd(d.y)]);
+      let st = null;
+      if (this.tickN % 6 === 0) { st = []; this.structs.near(p.x, p.y, R, (s2) => { if (inR(s2.x, s2.y, p.x, p.y)) st.push([s2.id, s2.type, rd(s2.x), rd(s2.y), Math.ceil(s2.hp), s2.maxHp, s2.owner]); }); }
       for (const e of this.events) {
         if (e.x !== undefined && !inR(e.x, e.y, p.x, p.y)) continue;
         ev.push(e);
@@ -577,7 +680,7 @@ class Game {
       this.send(p, {
         t: 's', dt: Math.round(this.dayTime * 1000) / 1000,
         you: { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10, hp: Math.ceil(p.hp), mhp: p.maxHp, xp: p.xp, xpn: xpNeeded(p.level), lv: p.level, spd: p.spd || 1, al: p.alive ? 1 : 0, sc: p.score },
-        p: pl, m: ml, pr, d: dr, ev,
+        p: pl, m: ml, pr, d: dr, ev, ...(st ? { st } : {}),
       });
     }
     this.events.length = 0;

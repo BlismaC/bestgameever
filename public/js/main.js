@@ -5,6 +5,7 @@ import { render } from './render.js';
 import { update as interpUpdate } from './interp.js';
 import * as FX from './fx.js';
 import * as ui from './ui.js';
+import { nearRes } from './world.js';
 
 const $ = (id) => document.getElementById(id);
 const nameEl = $('name');
@@ -21,10 +22,16 @@ initInput();
 // Same collision rule as the server so prediction never disagrees
 function collide(me) {
   const R = S.cfg.radius;
-  for (const r of S.res) {
-    if (!r.alive || Math.abs(r.x - me.x) > 160 || Math.abs(r.y - me.y) > 160) continue;
-    const def = S.content.nodes[r.type]; if (!def || !def.solid) continue;
+  nearRes(me.x, me.y, 160, (r) => {
+    if (!r.alive) return;
+    const def = S.content.nodes[r.type]; if (!def || !def.solid) return;
     const dx = me.x - r.x, dy = me.y - r.y, m2 = R + def.r * 0.8, d2 = dx * dx + dy * dy;
+    if (d2 < m2 * m2 && d2 > 0.0001) { const d = Math.sqrt(d2), push = (m2 - d) / d; me.x += dx * push; me.y += dy * push; }
+  });
+  for (const st of S.structs.values()) {
+    if (Math.abs(st.x - me.x) > 160 || Math.abs(st.y - me.y) > 160) continue;
+    const d0 = S.content.structures[st.type]; if (!d0 || !d0.solid) continue;
+    const dx = me.x - st.x, dy = me.y - st.y, m2 = R + d0.r * 0.92, d2 = dx * dx + dy * dy;
     if (d2 < m2 * m2 && d2 > 0.0001) { const d = Math.sqrt(d2), push = (m2 - d) / d; me.x += dx * push; me.y += dy * push; }
   }
   me.x = Math.max(30, Math.min(S.size - 30, me.x)); me.y = Math.max(30, Math.min(S.size - 30, me.y));
@@ -52,7 +59,21 @@ function frame(nowMs) {
     // ---- instant swing feedback (server confirms; its swing event for us is ignored)
     const it = S.inv[S.sel], held = it ? it[0] : '';
     const idef = held && S.content.items[held], w = idef && idef.w;
-    if (input.atk && !S.dead && t >= me.nextAtk) {
+    // ---- building: ghost preview + placing
+    const sdef = held && S.content.structures[held];
+    S.ghost = null;
+    if (sdef && !S.dead) {
+      const cam = S.cam; let gx = cam.x + (input.mx - innerWidth / 2) / cam.scale, gy = cam.y + (input.my - innerHeight / 2) / cam.scale;
+      const dx = gx - me.x, dy = gy - me.y, dd = Math.hypot(dx, dy), BR = S.cfg.build;
+      if (dd > BR) { gx = me.x + dx / dd * BR; gy = me.y + dy / dd * BR; }
+      let ok = Math.hypot(gx - S.size / 2, gy - S.size / 2) > S.cfg.safe && gx > 60 && gy > 60 && gx < S.size - 60 && gy < S.size - 60;
+      if (ok) nearRes(gx, gy, sdef.r + 90, (r) => { if (r.alive && Math.hypot(gx - r.x, gy - r.y) < sdef.r + S.content.nodes[r.type].r * 0.8 && S.content.nodes[r.type].solid) ok = false; });
+      if (ok) for (const o of S.structs.values()) { const od = S.content.structures[o.type]; if (od && Math.hypot(gx - o.x, gy - o.y) < sdef.r + od.r - 8) { ok = false; break; } }
+      if (ok && sdef.solid && Math.hypot(gx - me.x, gy - me.y) < sdef.r + S.cfg.radius) ok = false;
+      S.ghost = { type: held, x: gx, y: gy, ok, r: sdef.r };
+      if (input.atk && t >= me.nextPlace) { me.nextPlace = t + 0.22; send({ t: 'place', x: Math.round(gx), y: Math.round(gy) }); }
+    }
+    if (input.atk && !S.dead && !sdef && t >= me.nextAtk) {
       const cd = w ? w.cd : 0.5, rng = w ? w.rng : 48, arc = w ? w.arc : 90;
       me.nextAtk = t + cd; S.swings.set(S.id, { a: aim(), r: rng, arc: rng ? arc : 0, t: 0 });
     }
@@ -65,6 +86,7 @@ function frame(nowMs) {
     S.fx = S.fx.filter((f) => (f.k === 'dmg' ? f.t < 1 : f.t < (f.d || 1) + 0.15));
     for (const s of S.swings.values()) s.t += dt;
     for (const h of S.resHit.values()) h.t += dt;
+    for (const h of S.structHit.values()) h.t += dt;
 
     // ---- send input (20 Hz, only when changed)
     sendAcc += dt;

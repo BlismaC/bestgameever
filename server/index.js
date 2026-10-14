@@ -32,6 +32,8 @@ app.use('/shared', express.static(path.join(__dirname, '../shared')));
 app.use(express.static(path.join(__dirname, '../public')));
 app.get('/health', (q, r) => r.send('ok'));
 app.get('/api/status', (q, r) => r.json({ name: C.GAME_NAME, players: game.players.size, mobs: game.mobs.size, max: C.MAX_PLAYERS }));
+const worldJson = JSON.stringify({ seed: C.SEED, size: C.WORLD_SIZE, rt: game.world.nodeTypes, rs: game.world.res.map((r) => [game.world.nodeTypes.indexOf(r.type), r.x, r.y]) });
+app.get('/api/world', (q, r) => r.type('json').set('Cache-Control', 'no-cache').send(worldJson));
 const contentJson = JSON.stringify(content.clientPayload());
 app.get('/api/content', (q, r) => r.type('json').set('Cache-Control', 'no-cache').send(contentJson));
 

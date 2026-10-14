@@ -10,6 +10,7 @@ const nodes = require('./nodes');
 const biomes = require('./biomes');
 const mobsData = require('./mobs');
 const bossesData = require('./bosses');
+const structures = require('./structures');
 
 const items = {};
 const recipes = {};
@@ -22,6 +23,23 @@ for (const [id, d] of Object.entries(baseItems)) items[id] = { id, rarity: 'comm
 // ---- materials become items ----
 for (const m of materials) {
   items[m.id] = { id: m.id, name: m.name, emoji: m.emoji, color: m.color, type: 'material', rarity: 'common', tier: m.tier, stack: 99 };
+}
+
+
+// ---- crafting difficulty ----
+// Weapons need: lots of the main material, a wooden handle, leather grip, a chunk of the PREVIOUS tier's material,
+// rare accents at high tiers, and a crafting station that matches the tier.
+const STATION_BY_TIER = ['workbench', 'workbench', 'forge', 'forge', 'arcane_altar', 'arcane_altar', 'void_anvil', 'void_anvil'];
+function weaponCost(mat, arch) {
+  const t = mat.tier, cost = {};
+  cost[mat.id] = Math.ceil(arch.cost * (1 + t * 0.22));
+  if (mat.id !== 'wood') cost.wood = (cost.wood || 0) + 3;
+  if (t >= 1) cost.leather = 2 + Math.floor(t / 2);
+  if (t >= 1) { const prev = materials.find((m) => m.tier === t - 1 && m.id !== mat.id); if (prev) cost[prev.id] = (cost[prev.id] || 0) + Math.ceil(arch.cost / 2) + t; }
+  if (t >= 4) cost.gold = (cost.gold || 0) + 3;
+  if (t >= 6) cost.obsidian = (cost.obsidian || 0) + 5;
+  if (t >= 7) cost.shadow = (cost.shadow || 0) + 3;
+  return cost;
 }
 
 // ---- weapons: material x archetype x modifier ----
@@ -50,11 +68,7 @@ for (const mat of materials) {
         arch: arch.id, mat: mat.id, mod: mod.id,
       };
       weaponCount++;
-      if (mod.id === 'normal') {
-        const cost = { [mat.id]: arch.cost };
-        if (mat.id !== 'wood') cost.wood = 2;
-        recipes[id] = { id, out: id, count: 1, cost };
-      }
+      if (mod.id === 'normal') recipes[id] = { id, out: id, count: 1, cost: weaponCost(mat, arch), station: STATION_BY_TIER[mat.tier] };
     }
   }
 }
@@ -74,17 +88,24 @@ for (const [id, d] of Object.entries(bossesData)) {
     const sid = `summon_${id}`;
     items[sid] = { id: sid, name: d.summon.name, emoji: d.summon.emoji, color: d.color, type: 'consumable', rarity: 'epic', stack: 9,
       desc: `Summons ${d.name}.`, use: { summon: id } };
-    recipes[sid] = { id: sid, out: sid, count: 1, cost: d.summon.cost };
+    recipes[sid] = { id: sid, out: sid, count: 1, cost: d.summon.cost, station: d.summon.station || 'arcane_altar' };
   }
+}
+
+
+// ---- structures: placeable items + recipes ----
+for (const [id, d] of Object.entries(structures)) {
+  items[id] = { id, name: d.name, emoji: d.emoji, color: d.color, type: 'structure', rarity: 'common', stack: 50, desc: d.desc, place: id };
+  recipes[id] = { id, out: id, count: 1, cost: d.cost, station: d.station };
 }
 
 // ---- extra hand-written recipes ----
 const extra = {
-  potion_heal:  { out: 'potion_heal', count: 2, cost: { berries: 6, slime_gel: 2 } },
-  potion_speed: { out: 'potion_speed', count: 1, cost: { apple: 3, gold: 1, slime_gel: 3 } },
-  hissing_bomb: { out: 'hissing_bomb', count: 1, cost: { stone: 10, slime_gel: 6, copper: 2 } },
-  companion_cube_launcher: { out: 'companion_cube_launcher', count: 1, cost: { titanium: 6, steel: 10, plasma: 1 } },
-  tome_of_xp: { out: 'tome_of_xp', count: 1, cost: { amethyst: 2, bone: 10 } },
+  potion_heal:  { out: 'potion_heal', count: 2, cost: { berries: 8, slime_gel: 4 }, station: 'alchemy_table' },
+  potion_speed: { out: 'potion_speed', count: 1, cost: { apple: 4, gold: 2, slime_gel: 4 }, station: 'alchemy_table' },
+  hissing_bomb: { out: 'hissing_bomb', count: 1, cost: { stone: 14, slime_gel: 8, copper: 4 }, station: 'workbench' },
+  companion_cube_launcher: { out: 'companion_cube_launcher', count: 1, cost: { titanium: 8, steel: 12, plasma: 2 }, station: 'void_anvil' },
+  tome_of_xp: { out: 'tome_of_xp', count: 1, cost: { amethyst: 3, bone: 20 }, station: 'arcane_altar' },
 };
 for (const [id, r] of Object.entries(extra)) recipes[id] = { id, ...r };
 
@@ -128,6 +149,8 @@ function validate() {
   for (const m of Object.values(mobs)) {
     for (const p of m.patterns || []) if (p.type === 'summon' && !mobs[p.mob]) problems.push(`boss ${m.id} summons unknown "${p.mob}"`);
   }
+  for (const r of Object.values(recipes)) if (r.station && !structures[r.station]) problems.push(`recipe ${r.id} needs unknown station "${r.station}"`);
+  for (const [id, d] of Object.entries(structures)) for (const k of Object.keys(d.cost)) if (!items[k]) problems.push(`structure ${id} cost unknown item "${k}"`);
   return problems;
 }
 
@@ -138,6 +161,7 @@ function clientPayload() {
     if (it.tier !== undefined) o.t = it.tier;
     if (it.desc) o.d = it.desc;
     if (it.use) o.u = 1;
+    if (it.place) o.pl = 1;
     if (it.weapon) { o.w = { dmg: it.weapon.dmg, cd: it.weapon.cooldown, rng: it.weapon.melee ? it.weapon.melee.range : 0, arc: it.weapon.melee ? it.weapon.melee.arc : 0, rngd: it.weapon.projectile ? 1 : 0 }; if (it.arch) o.a = it.arch; }
     ci[it.id] = o;
   }
@@ -146,10 +170,11 @@ function clientPayload() {
   const cb = {}; for (const [id, b] of Object.entries(biomes)) cb[id] = { n: b.name, c: b.color, c2: b.color2 };
   return {
     items: ci, mobs: cm, nodes: cn, biomes: cb,
-    recipes: Object.values(recipes).map((r) => ({ id: r.id, o: r.out, n: r.count, c: r.cost })),
+    recipes: Object.values(recipes).map((r) => ({ id: r.id, o: r.out, n: r.count, c: r.cost, s: r.station || null })),
+    structures: Object.fromEntries(Object.entries(structures).map(([id, d]) => [id, { n: d.name, e: d.emoji, c: d.color, r: d.r, t: d.type, solid: d.solid ? 1 : 0, p: d.provides || null, hr: d.healRange || 0 }])),
   };
 }
 
 const stats = () => ({ items: Object.keys(items).length, weapons: weaponCount + Object.keys(uniques).length, recipes: Object.keys(recipes).length, mobs: Object.keys(mobs).length, nodes: Object.keys(nodes).length });
 
-module.exports = { items, recipes, mobs, nodes, biomes, HAND, randomWeapon, validate, clientPayload, stats };
+module.exports = { items, recipes, mobs, nodes, biomes, structures, HAND, randomWeapon, validate, clientPayload, stats };

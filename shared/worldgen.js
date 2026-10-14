@@ -38,7 +38,7 @@
   ];
 
   function create(seed, size) {
-    const scale = 1 / 1000, cx = size / 2, cy = size / 2, spawnR = 650;
+    const scale = 1 / (size * 0.15), cx = size / 2, cy = size / 2, spawnR = size * 0.045; // biomes ~ 15% of world width
     function climate(x, y) {
       const t = clamp01((fbm(x * scale, y * scale, seed) - 0.5) * 2.4 + 0.5);
       const m = clamp01((fbm(x * scale + 500, y * scale + 500, seed + 7) - 0.5) * 2.4 + 0.5);
@@ -51,7 +51,9 @@
       for (const [id, test] of RULES) if (test(t, m)) return id;
       return 'plains';
     }
-    return { biomeAt, size };
+    // 0 at the center, 1 at the far edge: drives monster strength & rare ore availability
+    const zoneAt = (x, y) => Math.min(1, Math.hypot(x - cx, y - cy) / (size * 0.46));
+    return { biomeAt, zoneAt, size };
   }
   return { create };
 });

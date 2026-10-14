@@ -18,15 +18,17 @@
   <div id="side">
     <div id="lb"></div>
     <canvas id="minimap" width="160" height="160"></canvas>
+    <div id="biome"></div>
     <div id="info"></div>
   </div>
   <div id="bossbar" class="hidden"><div id="bossname"></div><div class="bar boss"><div id="bossfill"></div></div></div>
   <div id="chat"><div id="chatlog"></div><input id="chatinput" maxlength="140" placeholder="Press Enter to chat — /help" autocomplete="off"></div>
   <div id="inv" class="panel hidden"><h3>Inventory <small>click to move · right-click to drop</small></h3><div id="invgrid"></div></div>
-  <div id="craft" class="panel hidden"><h3>Crafting <small>(C)</small></h3><input id="craftsearch" placeholder="Search recipes..." autocomplete="off"><div id="craftlist"></div></div>
+  <div id="craft" class="panel hidden"><h3>Crafting <small>(C)</small></h3><div id="craftnear"></div><input id="craftsearch" placeholder="Search recipes..." autocomplete="off"><div id="craftchips"></div><div id="craftlist"></div></div>
+  <div id="map" class="panel hidden"><h3>World map <small>(M)</small></h3><canvas id="worldmap" width="520" height="520"></canvas><div id="maplegend"></div></div>
   <div id="tip" class="hidden"></div>
   <div id="dead" class="hidden"><h1>You died</h1><p id="deadby"></p><p id="deadtimer"></p></div>
-  <div id="help">WASD move · Mouse aim/attack · Space dash · 1-9 / wheel select · F use · I inventory · C craft · Enter chat</div>
+  <div id="help">WASD move · Mouse aim/attack · Space dash · 1-9 select · F use · E inventory · C craft · M map · X pick up structure · Enter chat</div>
 </div>
 
 <div id="menu">
@@ -36,7 +38,7 @@
     <input id="name" maxlength="16" placeholder="Your name" autocomplete="off">
     <button id="play">PLAY</button>
     <p id="menumsg"></p>
-    <p class="tiny">WASD move · Mouse aim &amp; hold to attack · Space dash · F use item · C craft · I inventory</p>
+    <p class="tiny">WASD move · Mouse aim &amp; hold to attack · Space dash · F use item · E inventory · C craft · M map</p>
   </div>
 </div>
 

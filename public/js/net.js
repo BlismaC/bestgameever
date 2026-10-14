@@ -3,15 +3,16 @@ import * as ui from './ui.js';
 import * as FX from './fx.js';
 import * as A from './assets.js';
 import { pushSample } from './interp.js';
+import { buildGrid } from './world.js';
 
 export function send(o) { if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o)); }
 
 export async function connect(name, onFail) {
   try {
-    const r = await fetch('/api/content');
-    S.content = await r.json();
+    S.content = await (await fetch('/api/content')).json();
+    S.world = await (await fetch('/api/world')).json();
     await A.load();
-  } catch (e) { onFail('Could not load game content.'); return; }
+  } catch (e) { onFail('Could not load game data.'); return; }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws`);
   S.ws = ws;
@@ -27,11 +28,13 @@ function handle(m) {
     case 'init': {
       S.id = m.id; S.cfg = m.cfg; S.size = m.size; S.gameName = m.name;
       S.interpDelay = (1000 / m.cfg.tick) * 2.3;
-      S.gen = window.WorldGen.create(m.seed, m.size);
-      S.rtypes = m.rt;
-      S.res = m.rs.map(([ti, x, y], i) => ({ id: i, type: m.rt[ti], x, y, alive: true }));
+      S.gen = window.WorldGen.create(S.world.seed, m.size);
+      S.rtypes = S.world.rt;
+      S.res = S.world.rs.map(([ti, x, y], i) => ({ id: i, type: S.world.rt[ti], x, y, alive: true }));
       for (const id of m.dep) S.res[id].alive = false;
-      S.me = { x: 0, y: 0, hp: 100, mhp: 100, spd: 1, dashUntil: 0, dashReady: 0, dx: 0, dy: 0, init: false, nextAtk: 0, sp: 0, ph: 0, flash: 0 };
+      buildGrid();
+      S.structs = new Map();
+      S.me = { x: 0, y: 0, hp: 100, mhp: 100, spd: 1, dashUntil: 0, dashReady: 0, dx: 0, dy: 0, init: false, nextAtk: 0, nextPlace: 0, sp: 0, ph: 0, flash: 0 };
       S.joined = true; S.dead = false;
       ui.start();
       break;
@@ -52,6 +55,7 @@ function sync(map, seen, id, make) {
   e.goneAt = 0; seen.add(id); return e;
 }
 function markGone(map, seen) { for (const [id, e] of map) if (!seen.has(id) && !e.goneAt) e.goneAt = performance.now(); }
+const setStruct = (a) => { S.structs.set(a[0], { id: a[0], type: a[1], x: a[2], y: a[3], hp: a[4], max: a[5], owner: a[6] }); };
 
 function snapshot(m) {
   S.dayTime = m.dt; S.srv = m.you;
@@ -84,12 +88,13 @@ function snapshot(m) {
     const e = sync(S.projs, spr, a[0], () => ({ id: a[0], x: a[1], y: a[2], angle: 0 }));
     e.r = a[3]; e.color = a[4]; e.hostile = a[5];
     const last = e.buf[e.buf.length - 1];
-    const ang = last ? Math.atan2(a[2] - last.y, a[1] - last.x) : (e.angle || 0);
-    pushSample(e, a[1], a[2], (last && (a[1] !== last.x || a[2] !== last.y)) ? ang : (last ? last.a : 0));
+    const moved = last && (a[1] !== last.x || a[2] !== last.y);
+    pushSample(e, a[1], a[2], moved ? Math.atan2(a[2] - last.y, a[1] - last.x) : (last ? last.a : 0));
   }
   markGone(S.projs, spr);
 
   S.drops = m.d;
+  if (m.st) { const seen = new Set(); for (const a of m.st) { setStruct(a); seen.add(a[0]); } for (const id of S.structs.keys()) if (!seen.has(id)) S.structs.delete(id); }
 
   for (const e of m.ev) {
     switch (e.e) {
@@ -108,6 +113,10 @@ function snapshot(m) {
       }
       case 'ring': S.fx.push({ k: 'ring', x: e.x, y: e.y, r: e.r, d: e.d, t: 0 }); break;
       case 'pick': FX.sparkle(e.x, e.y); break;
+      case 'sadd': setStruct(e.s); FX.dust(e.x, e.y, 2); FX.dust(e.x + 8, e.y + 4, 2); break;
+      case 'sdel': { const s = S.structs.get(e.id); S.structs.delete(e.id); const d = s && S.content.structures[s.type]; FX.chips(e.x, e.y, d ? d.c : '#aaa', 12); FX.dust(e.x, e.y, 2); break; }
+      case 'shit': { const s = S.structs.get(e.id); if (s) { s.hp = e.hp; s.max = e.max; } S.structHit.set(e.id, { t: 0 }); const d = s && S.content.structures[s.type]; FX.chips(e.x, e.y, d ? d.c : '#aaa', 3); break; }
+      case 'trap': FX.sparks(e.x, e.y, '#ffffff', 14); FX.shake.m = Math.max(FX.shake.m, 3); break;
     }
   }
 }

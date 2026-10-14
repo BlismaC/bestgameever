@@ -60,3 +60,15 @@ Run `npm test` — the validator reports broken references.
 Drop PNG (or WebP) files into `public/assets/` — see `public/assets/README.txt` for names. Sprites face RIGHT.
 `mobs/<id>.png`, `nodes/<id>.png`, `weapons/<archetype>.png` (light gray, auto-tinted per material), `items/<id>.png`, `player/body.png`.
 Missing art falls back to built-in drawing. Tuning: `public/js/assetcfg.js`.
+
+## v0.3 additions
+- **World:** 24000 x 24000, large biomes, resources on a jittered grid (evenly spread, never clumped), served via `/api/world`.
+  Danger zones: monsters get stronger (HP/damage/XP/loot tier) the farther you get from the center; rare ores only exist far out (`minZone`).
+- **Crafting stations:** Workbench -> Forge -> Arcane Altar -> Void Anvil. Recipes require a nearby station (200 units) and chain through tiers
+  (previous-tier material + leather + handle + rare accents). See `weaponCost()` in `server/content/index.js` to tune difficulty.
+- **Building (Moomoo-style):** walls (wood/stone/iron), spikes (3 tiers), bear traps, campfire, stations. Select the item, click to place,
+  `X` picks up your own. Structures can be destroyed (axes beat wood, pickaxes beat stone/metal; bosses crush bases; mobs chew through walls).
+  Data lives in `server/content/structures.js`.
+- **UI:** `E` inventory, `C` crafting (stations + categories), `M` world map, biome + danger level display.
+- **Sprites:** `python3 tools/make_sprites.py` regenerates all art into `public/assets/` (needs `pip install pillow`).
+  Replace any PNG with your own art at any time (same filename).

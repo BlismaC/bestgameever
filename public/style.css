@@ -63,3 +63,16 @@ canvas#game{position:fixed;inset:0;display:block;cursor:crosshair}
 #dead h1{font-size:64px;letter-spacing:8px;color:#ff5a5a}
 #help{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);font-size:11px;opacity:.45;white-space:nowrap}
 @media(max-width:800px){#side,#help{display:none}.slot{width:44px;height:44px;font-size:22px}#invgrid{grid-template-columns:repeat(6,44px)}}
+
+#biome{font-size:12px;font-weight:700;margin-top:6px;text-shadow:0 1px 3px #000}
+#map{left:50%;transform:translate(-50%,-50%);width:auto}
+#worldmap{display:block;width:min(520px,70vh);height:min(520px,70vh);border-radius:8px;border:1px solid #fff3;background:#000}
+#maplegend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;margin-top:8px;opacity:.85}
+#maplegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+#craftnear{font-size:11px;opacity:.8;margin-bottom:8px}
+#craftchips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.chip{pointer-events:auto;cursor:pointer;padding:3px 9px;border-radius:12px;background:#fff1;font-size:11px;border:1px solid #fff2}
+.chip.on{background:#ffd23f;color:#222;font-weight:700}
+.rec .need{font-size:10px;color:#ff9a9a;margin-top:2px}
+.rec .need.ok{color:#9fe69f}
+#craft{width:370px}

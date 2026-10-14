@@ -14,6 +14,7 @@ export async function load() {
 export const get = (k) => imgs.get(k) || null;
 export const mob = (id) => get('mobs/' + id);
 export const node = (id) => get('nodes/' + id);
+export const struct = (id) => get('structures/' + id);
 export const playerBody = () => get('player/body');
 
 function tint(img, color, key) {
@@ -48,7 +49,7 @@ export function iconURL(id) {
   if (iconCache.has(id)) return iconCache.get(id);
   let url = null;
   const it = S.content.items[id];
-  const exact = get('items/' + id);
+  const exact = get('items/' + id) || (it && it.pl ? get('structures/' + id) : null);
   if (exact) url = exact.src;
   else if (it && it.a) { const base = get('weapons/' + it.a); if (base) url = tint(base, it.c, 'w' + it.a).toDataURL(); }
   iconCache.set(id, url); return url;
