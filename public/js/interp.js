@@ -19,6 +19,7 @@ function step(e, rt, dt) {
   e.sp = dt > 0 ? Math.hypot(x - e.x, y - e.y) / dt : 0; if (e.sp > 1500) e.sp = 0;
   e.ph = (e.ph || 0) + e.sp * dt * 0.07;
   e.x = x; e.y = y; e.angle = a;
+  if (e.look) { if (Math.cos(a) > 0.2) e.face = 1; else if (Math.cos(a) < -0.2) e.face = -1; }
   if (e.flash > 0) e.flash = Math.max(0, e.flash - dt * 5);
 }
 export function update(dt) {

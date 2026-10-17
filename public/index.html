@@ -10,39 +10,59 @@
 <canvas id="game"></canvas>
 
 <div id="hud" class="hidden">
+  <div id="evtbar" class="hidden"><div id="evtname"></div><div class="bar"><div id="evtfill"></div></div></div>
+  <div id="bossbar" class="hidden"><div id="bossname"></div><div class="bar boss"><div id="bossfill"></div></div></div>
+  <div id="banner" class="hidden"></div>
   <div id="stats">
+    <div id="buffs"></div>
     <div class="bar hp"><div id="hpfill"></div><span id="hptext"></span></div>
     <div class="bar xp"><div id="xpfill"></div><span id="lvtext"></span></div>
+    <div id="homerow"><button id="homebtn" class="btn small">🏠 Home <kbd>H</kbd></button><button id="islandbtn" class="btn small">Island <kbd>J</kbd></button><span id="coinhud">🪙 <b id="coinn">0</b></span></div>
   </div>
   <div id="hotbar"></div>
   <div id="side">
-    <div id="lb"></div>
+    <div id="clock"><span id="clockicon">☀</span> <span id="clocktext">12:00</span></div>
     <canvas id="minimap" width="160" height="160"></canvas>
     <div id="biome"></div>
+    <div id="lb"></div>
     <div id="info"></div>
   </div>
-  <div id="bossbar" class="hidden"><div id="bossname"></div><div class="bar boss"><div id="bossfill"></div></div></div>
   <div id="chat"><div id="chatlog"></div><input id="chatinput" maxlength="140" placeholder="Press Enter to chat — /help" autocomplete="off"></div>
-  <div id="inv" class="panel hidden"><h3>Inventory <small>click to move · right-click to drop</small></h3><div id="invgrid"></div></div>
-  <div id="craft" class="panel hidden"><h3>Crafting <small>(C)</small></h3><div id="craftnear"></div><input id="craftsearch" placeholder="Search recipes..." autocomplete="off"><div id="craftchips"></div><div id="craftlist"></div></div>
+  <div id="tpbar" class="hidden"><div id="tpfill"></div><span>Teleporting...</span></div>
+  <div id="toasts"></div>
+
+  <div id="inv" class="panel hidden"><h3>Inventory <small>click a slot, then another to swap · right-click drops</small></h3>
+    <div class="invwrap"><div class="invleft"><canvas id="invprev" width="120" height="150"></canvas><div class="armor"><div class="aslot">⛑<small>Helmet</small></div><div class="aslot">🛡<small>Chest</small></div><div class="aslot">👖<small>Legs</small></div></div></div>
+      <div><div id="invgrid"></div><div class="invfoot"><span>🪙 <b id="invcoins">0</b></span><div id="trash" class="slot trash" title="Trash: click an item, then click here to delete it">🗑</div></div></div></div>
+  </div>
+  <div id="craft" class="panel hidden"><h3>Crafting <small>(C) — items you can make right now</small></h3><div id="craftnear"></div><input id="craftsearch" placeholder="Search..." autocomplete="off"><div id="craftchips"></div><div id="craftlist"></div></div>
   <div id="map" class="panel hidden"><h3>World map <small>(M)</small></h3><canvas id="worldmap" width="520" height="520"></canvas><div id="maplegend"></div></div>
+  <div id="home" class="panel hidden"></div>
+  <div id="chest" class="panel hidden"></div>
+  <div id="npc" class="panel hidden"></div>
   <div id="tip" class="hidden"></div>
   <div id="dead" class="hidden"><h1>You died</h1><p id="deadby"></p><p id="deadtimer"></p></div>
-  <div id="help">WASD move · Mouse aim/attack · Space dash · 1-9 select · F use · E inventory · C craft · M map · X pick up structure · Enter chat</div>
+  <div id="help">WASD move · Mouse aim/attack · Space dash · 1-9 select · F use · E inventory · C craft · H home · T talk/open · M map · J island · X pick up</div>
 </div>
 
 <div id="menu">
-  <div class="card">
-    <h1 id="title">REALMFORGE</h1>
-    <p class="sub">Gather. Craft. Slay. Thousands of weapons. Dozens of bosses. Secrets everywhere.</p>
+  <canvas id="menucv"></canvas>
+  <div class="menucard">
+    <div id="logo">REALM<span>FORGE</span></div>
+    <p class="sub">Gather. Craft. Build. Slay. Thousands of weapons, endless secrets.</p>
+    <div class="creator">
+      <canvas id="preview" width="150" height="190"></canvas>
+      <div class="opts" id="opts"></div>
+    </div>
     <input id="name" maxlength="16" placeholder="Your name" autocomplete="off">
-    <button id="play">PLAY</button>
+    <button id="play" class="btn big">PLAY</button>
     <p id="menumsg"></p>
-    <p class="tiny">WASD move · Mouse aim &amp; hold to attack · Space dash · F use item · E inventory · C craft · M map</p>
+    <div class="menuhelp"><b>Controls</b> WASD move · Mouse aim &amp; attack · Space dash · E inventory · C craft · H island · T talk</div>
   </div>
 </div>
 
 <script src="/shared/worldgen.js"></script>
+<script src="/shared/movement.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

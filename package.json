@@ -8,10 +8,13 @@
     "dev": "node --watch server/index.js",
     "test": "node server/smoketest.js"
   },
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "compression": "^1.7.4",
     "express": "^4.19.2",
-    "ws": "^8.17.1"
+    "ws": "^8.17.1",
+    "pg": "^8.12.0"
   }
 }

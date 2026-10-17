@@ -23,6 +23,9 @@ export function boom(x, y, rad) {
   for (let i = 0; i < n; i++) { const a = r() * TAU, s = 80 + r() * rad * 2.2; add({ k: 'dot', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.4 + r() * 0.4, max: 0.8, size: 3 + r() * 4, color: r() < 0.5 ? '#ff9a3a' : '#ffe27a', drag: 4 }); }
   for (let i = 0; i < 5; i++) add({ k: 'puff', x: x + (r() - 0.5) * rad * 0.6, y: y + (r() - 0.5) * rad * 0.6, vx: (r() - 0.5) * 50, vy: (r() - 0.5) * 50, life: 0.7, max: 0.7, size: rad * 0.35, color: '#555', drag: 2 });
 }
+export function trail(x, y, color, size = 3) { add({ k: 'dot', x: x + (r() - 0.5) * 6, y: y + (r() - 0.5) * 6, vx: (r() - 0.5) * 20, vy: (r() - 0.5) * 20, life: 0.28, max: 0.28, size, color, drag: 3 }); }
+export function pluses(x, y, color = '#7dff8a') { for (let i = 0; i < 7; i++) add({ k: 'plus', x: x + (r() - 0.5) * 34, y: y + (r() - 0.5) * 20, vx: (r() - 0.5) * 20, vy: -30 - r() * 50, life: 0.9, max: 0.9, size: 5 + r() * 3, color, drag: 1 }); }
+export function leaves(x, y, color) { for (let i = 0; i < 5; i++) add({ k: 'chip', x, y, vx: (r() - 0.5) * 120, vy: (r() - 0.5) * 120, rot: r() * 6, vr: (r() - 0.5) * 8, life: 0.7, max: 0.7, size: 5, color, drag: 3 }); }
 export function update(dt) {
   shake.m *= Math.exp(-dt * 9); if (shake.m < 0.2) shake.m = 0;
   for (let i = P.length - 1; i >= 0; i--) {
@@ -41,6 +44,8 @@ export function draw(ctx) {
       ctx.globalAlpha = Math.min(1, a * 1.5); ctx.fillStyle = p.color; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2); ctx.restore();
     } else if (p.k === 'puff') {
       ctx.globalAlpha = a * 0.35; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (1.6 - a * 0.8), 0, TAU); ctx.fill();
+    } else if (p.k === 'plus') {
+      ctx.globalAlpha = Math.min(1, a * 1.4); ctx.fillStyle = p.color; const z = p.size; ctx.fillRect(p.x - z / 2, p.y - z / 6, z, z / 3); ctx.fillRect(p.x - z / 6, p.y - z / 2, z / 3, z);
     } else if (p.k === 'ring') {
       const k = 1 - a; ctx.globalAlpha = a * 0.8; ctx.strokeStyle = p.color; ctx.lineWidth = 6 * a + 1; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.3 + k * 0.8), 0, TAU); ctx.stroke();
       ctx.globalAlpha = a * 0.25; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.3 + k * 0.8), 0, TAU); ctx.fill();

@@ -18,6 +18,7 @@ module.exports = {
   iron_ore:     ore('iron_ore', 'Iron Ore', 'iron', 1, '#d6d9de', { minZone: 0.05 }),
   silver_ore:   ore('silver_ore', 'Silver Ore', 'silver', 2, '#f2f6fb', { minZone: 0.2 }),
   gold_ore:     ore('gold_ore', 'Gold Ore', 'gold', 2, '#ffd23f', { minZone: 0.2 }),
+  hellstone_ore: ore('hellstone_ore', 'Hellstone Ore', 'hellstone', 3, '#ff5a1a', { minZone: 0.25 }),
   jade_ore:     ore('jade_ore', 'Jade Ore', 'jade', 3, '#38b36f', { minZone: 0.35 }),
   ruby_ore:     ore('ruby_ore', 'Ruby Ore', 'ruby', 3, '#e0245e', { minZone: 0.35 }),
   sapphire_ore: ore('sapphire_ore', 'Sapphire Ore', 'sapphire', 3, '#2f6bff', { minZone: 0.35 }),

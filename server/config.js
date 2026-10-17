@@ -18,10 +18,11 @@ module.exports = {
   PVP: true,
   BUILD_RANGE: 260, CRAFT_RANGE: 200, MAX_STRUCTS_PER_PLAYER: 90,
   DAY_LENGTH: 480,         // seconds for a full day/night cycle
-  MOBS_PER_PLAYER: 14,
-  MOB_CAP: 500,
+  MOBS_PER_PLAYER: 5,
+  MOB_CAP: 140,
   SHINY_CHANCE: 0.01,      // rare golden mobs: more HP, triple loot
-  BOSS_INTERVAL: 360,      // seconds between natural boss spawns
+  BOSS_INTERVAL: 1500,     // seconds between (rare) natural boss rolls
+  ISLAND_SIZE: 2400, ISLAND_R: 900, TP_TIME: 4,
   RESPAWN_TIME: 3,
   CHAT_MAX: 140,
   ADMIN_KEY: process.env.ADMIN_KEY || '',

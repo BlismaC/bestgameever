@@ -1,13 +1,18 @@
-// Weapon modifiers (prefixes). 'normal' is the craftable base. Others drop from mobs/bosses.
-// fx: on-hit effects. burn/poison {dpsMul of weapon dmg, dur}, slow {mult, dur}, lifesteal fraction.
+// Item modifiers (Terraria-style). Each crafted/dropped weapon rolls one (or none).
+// dmg/kb are % changes, crit is +percentage points, tier shifts rarity/colour, value is the % price change.
 module.exports = [
-  { id: 'normal',    name: '',          rarity: 'common',    dmg: 1.0,  cd: 1.0 },
-  { id: 'sharp',     name: 'Sharp',     rarity: 'uncommon',  dmg: 1.2,  cd: 1.0 },
-  { id: 'swift',     name: 'Swift',     rarity: 'uncommon',  dmg: 1.0,  cd: 0.78 },
-  { id: 'heavy',     name: 'Heavy',     rarity: 'rare',      dmg: 1.4,  cd: 1.2 },
-  { id: 'flaming',   name: 'Flaming',   rarity: 'epic',      dmg: 1.1,  cd: 1.0, fx: { burn: { dpsMul: 0.35, dur: 3 } } },
-  { id: 'frozen',    name: 'Frozen',    rarity: 'epic',      dmg: 1.1,  cd: 1.0, fx: { slow: { mult: 0.45, dur: 2.5 } } },
-  { id: 'venomous',  name: 'Venomous',  rarity: 'epic',      dmg: 1.1,  cd: 1.0, fx: { poison: { dpsMul: 0.25, dur: 6 } } },
-  { id: 'vampiric',  name: 'Vampiric',  rarity: 'epic',      dmg: 1.1,  cd: 1.0, fx: { lifesteal: 0.12 } },
-  { id: 'legendary', name: 'Legendary', rarity: 'legendary', dmg: 1.9,  cd: 0.85, fx: { burn: { dpsMul: 0.2, dur: 2 }, lifesteal: 0.06 } },
+  { id: 'keen',       n: 'Keen',       dmg: 0,   crit: 3, kb: 0,   tier: 1,  value: 12.36 },
+  { id: 'superior',   n: 'Superior',   dmg: 10,  crit: 3, kb: 10,  tier: 2,  value: 64.51 },
+  { id: 'forceful',   n: 'Forceful',   dmg: 0,   crit: 0, kb: 15,  tier: 1,  value: 37.59 },
+  { id: 'broken',     n: 'Broken',     dmg: -30, crit: 0, kb: -20, tier: -2, value: -67.37 },
+  { id: 'damaged',    n: 'Damaged',    dmg: -15, crit: 0, kb: 0,   tier: -1, value: -24.83 },
+  { id: 'shoddy',     n: 'Shoddy',     dmg: -10, crit: 0, kb: -15, tier: -2, value: -39.11 },
+  { id: 'hurtful',    n: 'Hurtful',    dmg: 10,  crit: 0, kb: 0,   tier: 1,  value: 25.89 },
+  { id: 'strong',     n: 'Strong',     dmg: 0,   crit: 0, kb: 15,  tier: 1,  value: 37.59 },
+  { id: 'unpleasant', n: 'Unpleasant', dmg: 5,   crit: 0, kb: 15,  tier: 2,  value: 51.7 },
+  { id: 'weak',       n: 'Weak',       dmg: 0,   crit: 0, kb: -20, tier: -1, value: -33.41 },
+  { id: 'ruthless',   n: 'Ruthless',   dmg: 18,  crit: 0, kb: -10, tier: 1,  value: 17.34 },
+  { id: 'godly',      n: 'Godly',      dmg: 15,  crit: 5, kb: 15,  tier: 2,  value: 111.63 },
+  { id: 'demonic',    n: 'Demonic',    dmg: 15,  crit: 5, kb: 0,   tier: 2,  value: 60.02 },
+  { id: 'zealous',    n: 'Zealous',    dmg: 0,   crit: 5, kb: 0,   tier: 1,  value: 21 },
 ];

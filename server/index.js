@@ -8,12 +8,14 @@ const { WebSocketServer } = require('ws');
 const C = require('./config');
 const content = require('./content');
 const Game = require('./game');
+const storage = require('./storage');
 
 const problems = content.validate();
 if (problems.length) { console.warn('[content] problems:\n - ' + problems.join('\n - ')); }
 console.log('[content]', content.stats());
 
-const game = new Game();
+const store = storage.create();
+const game = new Game(store);
 const app = express();
 app.disable('x-powered-by');
 app.use(compression());
@@ -38,26 +40,27 @@ const contentJson = JSON.stringify(content.clientPayload());
 app.get('/api/content', (q, r) => r.type('json').set('Cache-Control', 'no-cache').send(contentJson));
 
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 2048 });
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 4096 });
 
 wss.on('connection', (ws) => {
-  let player = null; let msgs = 0;
+  let player = null, joining = false, msgs = 0;
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
   const rate = setInterval(() => { msgs = 0; }, 1000);
   ws.on('message', (data) => {
-    if (++msgs > 80) return; // flood protection
+    if (++msgs > 150) return; // flood protection
     let m; try { m = JSON.parse(data); } catch (e) { return; }
     if (!m || typeof m.t !== 'string') return;
     if (!player) {
-      if (m.t !== 'join') return;
+      if (m.t !== 'join' || joining) return;
       if (game.players.size >= C.MAX_PLAYERS) { ws.send(JSON.stringify({ t: 'full' })); ws.close(); return; }
-      player = game.addPlayer(ws, m.name);
+      joining = true;
+      game.join(ws, m).then((p) => { player = p; joining = false; if (!p) ws.close(); else if (ws.readyState !== 1) game.leave(p); }).catch((e) => { console.error('[join]', e); joining = false; ws.close(); });
       return;
     }
-    game.handle(player, m);
+    try { game.handle(player, m); } catch (e) { console.error('[handle]', m.t, e); }
   });
-  const leave = () => { clearInterval(rate); if (player) { game.removePlayer(player); player = null; } };
+  const leave = () => { clearInterval(rate); if (player) { const p = player; player = null; game.leave(p); } };
   ws.on('close', leave);
   ws.on('error', leave);
 });
@@ -74,4 +77,5 @@ setInterval(() => {
 setInterval(() => { fetch('https://bestgameever.onrender.com/health').catch(() => {}); }, 4 * 60 * 1000);
 
 server.listen(C.PORT, () => console.log(`${C.GAME_NAME} running on :${C.PORT} (seed ${C.SEED}, ${C.DEV ? 'dev' : 'prod'})`));
-process.on('SIGTERM', () => { server.close(); process.exit(0); });
+const shutdown = async () => { try { await game.saveAll(); } catch (e) {} server.close(); process.exit(0); };
+process.on('SIGTERM', shutdown); process.on('SIGINT', shutdown);

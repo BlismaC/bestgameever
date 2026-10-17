@@ -1,6 +1,6 @@
 // Regular mobs. behavior: passive | hostile | ranged. when: day | night | any (spawn time).
 // drops: {item,min,max,chance} or {roll:'weapon', tier:[min,max], mods:[..], chance}
-module.exports = {
+const mobs = {
   cow:     { name: 'Cow', emoji: '🐄', color: '#f4f4f4', radius: 26, hp: 40, speed: 60, behavior: 'passive', when: 'day', xp: 5,
              drops: [{ item: 'meat', min: 1, max: 3 }, { item: 'leather', min: 0, max: 2 }] },
   chicken: { name: 'Chicken', emoji: '🐔', color: '#fff6d6', radius: 14, hp: 10, speed: 80, behavior: 'passive', when: 'day', xp: 2,
@@ -44,3 +44,20 @@ module.exports = {
              ranged: { keep: 400, range: 750, cd: 1.1, count: 3, spread: 0.4, proj: { speed: 520, life: 1.5, radius: 11, dmg: 18, color: '#ff5a1a', fx: { burn: { dps: 6, dur: 3 } } } },
              drops: [{ item: 'dragon', min: 1, max: 2, chance: 0.6 }, { roll: 'weapon', tier: [4, 6], mods: ['flaming', 'legendary', 'heavy'], chance: 0.12 }] },
 };
+mobs.demon_eye = { name: 'Demon Eye', emoji: '👁️', color: '#e8e8f0', radius: 20, hp: 60, speed: 170, dmg: 12, behavior: 'hostile', when: 'night', aggro: 700, xp: 22, minZone: 0.02,
+  drops: [{ item: 'lens', min: 0, max: 1, chance: 0.5 }] };
+mobs.slime.minZone = 0;
+// Rare unique drops (item ids from uniques.js). chance is per kill.
+const RARE = {
+  cow: ['bovine_bonker'], chicken: ['egg_cannon'], toad: ['croaker'], slime: ['slimy_staff'], goblin: ['goblin_shiv', 'goblin_banner_blade'], wolf: ['fang_dagger'], spider: ['widow_bow'],
+  skeleton: ['bone_chakram'], zombie: ['rotten_maul'], bandit: ['bandit_dirk'], scorpion: ['stinger_spear'], mummy: ['wrap_whip'], yeti: ['yeti_club'],
+  frost_wolf: ['frostbite'], bog_witch: ['witch_brew_staff'], lava_imp: ['imp_wand'], magma_golem: ['magma_maul'], shadow_wraith: ['soul_reaper'], wyvern: ['wyvern_lance'], demon_eye: ['eye_staff'],
+};
+for (const [id, list] of Object.entries(RARE)) {
+  const m = mobs[id];
+  m.drops = (m.drops || []).filter((d) => d.item !== 'rubber_duck_blaster');
+  for (const it of list) m.drops.push({ item: it, chance: id === 'chicken' || id === 'toad' ? 0.02 : 0.012 });
+  m.drops.push({ item: 'coin', min: 1 + Math.floor((m.xp || 5) * 0.3), max: 2 + Math.floor((m.xp || 5) * 0.7) });
+}
+mobs.slime.drops.push({ item: 'rubber_duck_blaster', chance: 0.002 });
+module.exports = mobs;

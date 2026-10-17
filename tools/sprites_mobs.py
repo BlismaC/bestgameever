@@ -71,12 +71,17 @@ def toad(c):
 
 def slime(c, col='#5fd35f', crown=False, size=1.0):
     r = c.size / 2
-    c.ell(r, r + 8, 98 * size, 78 * size, C(col, 235), OUTLINE, 4)
-    c.ell(r - 24 * size, r - 22 * size, 54 * size, 38 * size, lite(C(col, 255), .35), None, 0, -.3)
-    c.ell(r + 40 * size, r + 34 * size, 46 * size, 24 * size, dark(C(col, 255), .12), None, 0, .3)
-    for (dx, dy, rr) in [(-50, 26, 6), (-20, 40, 5), (-70, -6, 4)]: c.circ(r + dx * size, r + dy * size, rr * size, lite(C(col, 255), .55), None, 0)
-    eyes(c, r + 42 * size, 24 * size, 12 * size, y=r - 4)
-    c.line(c.bez((r + 56 * size, r + 22 * size), (r + 66 * size, r + 34 * size), (r + 56 * size, r + 44 * size)), OUTLINE, 4)
+    g = C(col, 255)
+    c.ell(r, r + 20, 100 * size, 92 * size, g, OUTLINE, 4)
+    c.d.rectangle([0, int((r + 70 * size) * SS), c.size * SS, c.size * SS], fill=(0, 0, 0, 0))   # flat jelly bottom
+    c.ell(r - 30 * size, r - 20 * size, 46 * size, 30 * size, lite(g, .45), None, 0, -.3)
+    c.ell(r - 58 * size, r + 6 * size, 10 * size, 8 * size, lite(g, .7), None, 0, -.3)
+    c.ell(r + 42 * size, r + 42 * size, 52 * size, 20 * size, dark(g, .14), None, 0, .15)
+    for (dx, dy, rr) in [(-6, -50, 6), (34, -34, 5), (-74, 24, 5)]: c.circ(r + dx * size, r + dy * size, rr * size, lite(g, .7), None, 0)
+    for sgn in (-1, 1):
+        c.ell(r + 36 * size, r + sgn * 22 * size + 4, 9 * size, 13 * size, (255, 255, 255, 255), OUTLINE, 2)
+        c.ell(r + 40 * size, r + sgn * 22 * size + 6, 4.5 * size, 7 * size, OUTLINE, None, 0)
+    c.line(c.bez((r + 38 * size, r + 52 * size), (r + 52 * size, r + 62 * size), (r + 66 * size, r + 50 * size)), OUTLINE, 4)
 
 def goblin(c):
     for sgn in (-1, 1): c.poly([(150, 128 + sgn * 28), (126, 128 + sgn * 78), (160, 128 + sgn * 38)], C('#6aa84f'))

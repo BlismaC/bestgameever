@@ -11,7 +11,7 @@ module.exports = {
   onChat(game, p, msg) {
     const compact = msg.toLowerCase().replace(/[\s,]+/g, '');
     if (compact === 'uuddlrlrba' || compact === 'upupdowndownleftrightleftrightba') {
-      if (!p.konami) { p.konami = true; game.addItem(p, 'konami_blade', 1); game.sys(p, '🎮 +30 lives. Konami Blade unlocked.'); }
+      if (!p.konami) { p.konami = true; game.addItem(p, 'konami_blade', 1, null); game.sys(p, '🎮 +30 lives. Konami Blade unlocked.'); }
       return true;
     }
     if (msg.toLowerCase() === '/moo') {

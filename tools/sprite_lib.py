@@ -89,6 +89,31 @@ class Cv:
             pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
         s.poly(pts, fill, out, ow)
 
+    def save_px(s, path, res, k, colors=22, thr=100, outline=0.5):
+        """Pixel-art export: downsample to res x res, hard alpha, palette-reduce, add a shaded 1px outline, upscale by k (nearest)."""
+        small = s.im.convert('RGBa').resize((res, res), Image.BOX).convert('RGBA')
+        a = small.split()[3].point(lambda v: 255 if v > thr else 0)
+        rgb = small.convert('RGB')
+        q = rgb.quantize(colors=colors, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert('RGB')
+        W = res + 2
+        out = Image.new('RGBA', (W, W), (0, 0, 0, 0))
+        px = out.load(); qp = q.load(); ap = a.load()
+        for y in range(res):
+            for x in range(res):
+                if ap[x, y]: px[x + 1, y + 1] = qp[x, y] + (255,)
+        src = out.copy(); sp = src.load()
+        for y in range(W):
+            for x in range(W):
+                if sp[x, y][3]: continue
+                best = None
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < W and 0 <= ny < W and sp[nx, ny][3]:
+                        c = sp[nx, ny]
+                        if best is None or sum(c[:3]) < sum(best[:3]): best = c
+                if best: px[x, y] = (int(best[0] * outline * 0.6), int(best[1] * outline * 0.6), int(best[2] * outline * 0.7), 255)
+        out.resize((W * k, W * k), Image.NEAREST).save(path)
+
     def save(s, path, out=None):
         out = out or s.size
         s.im.resize((out, out), Image.LANCZOS).save(path)

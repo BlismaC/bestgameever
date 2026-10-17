@@ -3,10 +3,10 @@ from sprites_mobs import *
 import math
 
 def slime_king(c):
-    slime(c, '#4fd04f', size=1.0)
+    slime(c, '#4f8fe0', size=1.0)
     pts = [(120, 40), (136, 66), (160, 38), (176, 70), (200, 44), (198, 98), (128, 100)]
-    c.poly([(110, 94), (110, 56), (132, 76), (150, 44), (168, 76), (190, 56), (190, 94)], C('#ffd23f'), OUTLINE, 3)
-    for x, col in [(130, '#e0245e'), (150, '#2f6bff'), (170, '#1fcf7a')]: c.circ(x, 84, 6, C(col), OUTLINE, 1.5)
+    c.poly([(104, 84), (104, 40), (128, 62), (150, 26), (172, 62), (196, 40), (196, 84)], C('#ffd23f'), OUTLINE, 3)
+    for x, col in [(124, '#1fcf7a'), (150, '#e0245e'), (176, '#2f6bff')]: c.circ(x, 70, 7, C(col), OUTLINE, 2)
     c.rng  # keep deterministic
 
 def elder_ent(c):

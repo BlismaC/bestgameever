@@ -1,6 +1,6 @@
 // Placeable structures (items with the same id are auto-created). kind = which tool type damages it fastest.
 // type: station | wall | spike | trap | fire.   cost/station = crafting recipe (station null = by hand).
-module.exports = {
+const S = {
   workbench:     { name: 'Workbench', emoji: '🛠️', color: '#a0703c', r: 34, hp: 300, solid: true, kind: 'wood', type: 'station', provides: 'workbench', cost: { wood: 30, stone: 10 }, station: null, desc: 'Craft tools, basic weapons, walls and traps.' },
   forge:         { name: 'Forge', emoji: '🔥', color: '#8a8f98', r: 38, hp: 500, solid: true, kind: 'stone', type: 'station', provides: 'forge', cost: { stone: 50, copper: 12, wood: 10 }, station: 'workbench', desc: 'Smith iron-age gear (tier 2-3 weapons, iron walls).' },
   alchemy_table: { name: 'Alchemy Table', emoji: '⚗️', color: '#7a4fb0', r: 32, hp: 250, solid: true, kind: 'wood', type: 'station', provides: 'alchemy_table', cost: { wood: 20, slime_gel: 12, copper: 6 }, station: 'workbench', desc: 'Brew potions.' },
@@ -16,3 +16,11 @@ module.exports = {
   bear_trap:     { name: 'Bear Trap', emoji: '🪤', color: '#9aa0a8', r: 24, hp: 60, solid: false, kind: 'metal', type: 'trap', dmg: 28, root: 2.5, rearm: 10, cost: { copper: 8, wood: 6 }, station: 'workbench', desc: 'Roots and wounds anything that steps on it.' },
   campfire:      { name: 'Campfire', emoji: '🏕️', color: '#ff9a3a', r: 26, hp: 80, solid: false, kind: 'wood', type: 'fire', heal: 4, healRange: 170, cost: { wood: 8, stone: 4 }, station: null, desc: 'Heals nearby players and lights the night.' },
 };
+S.chest = { name: 'Chest', emoji: '🧰', color: '#a0703c', r: 30, hp: 300, solid: true, kind: 'wood', type: 'chest', cost: { wood: 24, iron: 4 }, station: 'workbench', desc: 'Stores 20 items. Only on your island.' };
+// limits per player: main = overworld, home = private island. homeOnly = may only be placed on the island.
+const LIM = {
+  workbench: [0, 1, 1], forge: [0, 1, 1], alchemy_table: [0, 1, 1], arcane_altar: [0, 1, 1], void_anvil: [0, 1, 1], chest: [0, 12, 1],
+  wall_wood: [40, 300], wall_stone: [30, 300], wall_iron: [20, 300], spikes_wood: [12, 60], spikes_stone: [10, 60], spikes_iron: [8, 60], bear_trap: [6, 40], campfire: [3, 10],
+};
+for (const [id, d] of Object.entries(S)) { const l = LIM[id] || [10, 50]; d.limitMain = l[0]; d.limitHome = l[1]; d.homeOnly = !!l[2] || l[0] === 0; }
+module.exports = S;

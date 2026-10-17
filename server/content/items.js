@@ -1,14 +1,20 @@
-// Non-weapon items: foods, drops, potions. (Materials & weapons are generated in index.js)
-// use: {heal:n} | {buff:{speed:mult,dur}} | {xp:n} | {summon:'bossId'}
+// Non-weapon items. use: {heal, buffs:[{id,dur}], xp, summon}. Healing items trigger "Potion Sickness" scaled by heal power.
 module.exports = {
-  meat:         { name: 'Raw Meat', emoji: '🥩', color: '#d9534f', type: 'consumable', use: { heal: 12 } },
-  apple:        { name: 'Apple', emoji: '🍎', color: '#e03c3c', type: 'consumable', use: { heal: 10 } },
-  berries:      { name: 'Berries', emoji: '🫐', color: '#5b6dd8', type: 'consumable', use: { heal: 6 } },
-  cactus_flesh: { name: 'Cactus Flesh', emoji: '🌵', color: '#3f9a4a', type: 'consumable', use: { heal: 8 } },
-  leather:      { name: 'Leather', emoji: '🟤', color: '#8b5a2b', type: 'material' },
-  slime_gel:    { name: 'Slime Gel', emoji: '🫠', color: '#5fd35f', type: 'material' },
-  potion_heal:  { name: 'Healing Potion', emoji: '🧪', color: '#ff5577', type: 'consumable', rarity: 'uncommon', use: { heal: 60 } },
-  potion_speed: { name: 'Swiftness Potion', emoji: '⚡', color: '#ffe14a', type: 'consumable', rarity: 'uncommon', use: { buff: { speed: 1.45, dur: 25 } } },
-  tome_of_xp:   { name: 'Tome of Knowledge', emoji: '📚', color: '#a45cff', type: 'consumable', rarity: 'rare', use: { xp: 150 } },
-  holy_milk:    { name: 'Holy Milk', emoji: '🥛', color: '#ffffff', type: 'consumable', rarity: 'legendary', desc: 'Summons Moo Moo, the Cow God. Why would you.', use: { summon: 'cow_god' } },
+  coin:          { name: 'Coin', emoji: '🪙', color: '#ffd23f', type: 'currency', stack: 9999, value: 1, desc: 'Currency. Spend it at the Merchant.' },
+  meat:          { name: 'Raw Meat', emoji: '🥩', color: '#d9534f', type: 'consumable', value: 4, use: { heal: 14 } },
+  apple:         { name: 'Apple', emoji: '🍎', color: '#e03c3c', type: 'consumable', value: 3, use: { heal: 10 } },
+  berries:       { name: 'Berries', emoji: '🫐', color: '#5b6dd8', type: 'consumable', value: 2, use: { heal: 6 } },
+  cactus_flesh:  { name: 'Cactus Flesh', emoji: '🌵', color: '#3f9a4a', type: 'consumable', value: 3, use: { heal: 8 } },
+  cooked_meat:   { name: 'Roasted Meat', emoji: '🍖', color: '#c46a3a', type: 'consumable', value: 12, rarity: 'uncommon', desc: 'Hearty. Grants Well Fed.', use: { heal: 30, buffs: [{ id: 'well_fed', dur: 180 }] } },
+  leather:       { name: 'Leather', emoji: '🟤', color: '#8b5a2b', type: 'material', value: 5 },
+  slime_gel:     { name: 'Slime Gel', emoji: '🫠', color: '#5fd35f', type: 'material', value: 3 },
+  lens:          { name: 'Lens', emoji: '👁️', color: '#e8e8f0', type: 'material', value: 20, desc: 'A bloodshot eye lens.' },
+  potion_heal:   { name: 'Healing Potion', emoji: '🧪', color: '#ff5577', type: 'consumable', rarity: 'uncommon', value: 40, use: { heal: 60 } },
+  potion_greater_heal: { name: 'Greater Healing Potion', emoji: '🧪', color: '#ff2d55', type: 'consumable', rarity: 'rare', value: 140, use: { heal: 150 } },
+  potion_regen:  { name: 'Regeneration Potion', emoji: '💗', color: '#ff7aa8', type: 'consumable', rarity: 'uncommon', value: 60, use: { buffs: [{ id: 'regeneration', dur: 180 }] } },
+  potion_swift:  { name: 'Swiftness Potion', emoji: '⚡', color: '#ffe14a', type: 'consumable', rarity: 'uncommon', value: 60, use: { buffs: [{ id: 'swiftness', dur: 150 }] } },
+  potion_ironskin: { name: 'Ironskin Potion', emoji: '🛡️', color: '#c9d0d8', type: 'consumable', rarity: 'uncommon', value: 60, use: { buffs: [{ id: 'ironskin', dur: 180 }] } },
+  potion_wrath:  { name: 'Wrath Potion', emoji: '💢', color: '#ff6a3a', type: 'consumable', rarity: 'rare', value: 90, use: { buffs: [{ id: 'wrath', dur: 150 }] } },
+  tome_of_xp:    { name: 'Tome of Knowledge', emoji: '📚', color: '#a45cff', type: 'consumable', rarity: 'rare', value: 120, use: { xp: 150 } },
+  holy_milk:     { name: 'Holy Milk', emoji: '🥛', color: '#ffffff', type: 'consumable', rarity: 'legendary', value: 500, desc: 'Summons Moo Moo, the Cow God. Why would you.', use: { summon: 'cow_god' } },
 };

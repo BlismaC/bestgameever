@@ -13,6 +13,7 @@ module.exports = [
   { id: 'gold',      name: 'Gold',      tier: 3, dmg: 2.8, color: '#ffd23f', emoji: '🥇' },
   { id: 'obsidian',  name: 'Obsidian',  tier: 3, dmg: 3.5, color: '#2b1b3d', emoji: '⬛' },
   { id: 'ice',       name: 'Ice',       tier: 3, dmg: 3.1, color: '#9be7ff', emoji: '🧊' },
+  { id: 'hellstone', name: 'Hellstone', tier: 4, dmg: 4.6, color: '#ff5a1a', emoji: '🔥' },
   { id: 'jade',      name: 'Jade',      tier: 4, dmg: 3.8, color: '#38b36f', emoji: '🟩' },
   { id: 'ruby',      name: 'Ruby',      tier: 4, dmg: 4.2, color: '#e0245e', emoji: '🔴' },
   { id: 'sapphire',  name: 'Sapphire',  tier: 4, dmg: 4.2, color: '#2f6bff', emoji: '🔷' },

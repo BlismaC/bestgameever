@@ -72,3 +72,20 @@ Missing art falls back to built-in drawing. Tuning: `public/js/assetcfg.js`.
 - **UI:** `E` inventory, `C` crafting (stations + categories), `M` world map, biome + danger level display.
 - **Sprites:** `python3 tools/make_sprites.py` regenerates all art into `public/assets/` (needs `pip install pillow`).
   Replace any PNG with your own art at any time (same filename).
+
+## v0.4 — what changed
+**Persistence (islands + characters).** Players are identified by a random token stored in their browser (`localStorage`), no login needed.
+Profiles (inventory, level, xp) and private islands (buildings, chests, guest list) are saved by `server/storage.js`:
+- `DATABASE_URL` set (any free Postgres: Neon, Supabase, Render Postgres) -> saved in PostgreSQL. **Do this on Render** — its free disk is wiped on every restart.
+- not set -> JSON files in `./data` (fine for local play).
+
+**Gameplay**
+- Terraria-style modifiers (Keen, Superior, Godly, Broken ...) roll on crafted/dropped weapons; reroll them at Brun the Reforger. Table: `server/content/modifiers.js`.
+- Axes chop trees, pickaxes mine rock/ore; nothing else can. Other players' builds can't be damaged; per-item build limits (`structures.js`).
+- Crafting stations + chests can only be placed on your private island (`H`). The craft list only shows what you can afford.
+- Healing items cause Potion Sickness scaled to their strength; buffs/debuffs show as icons above your health.
+- Random world events (Slime Rain, Blood Moon, Sandstorm, Blizzard) -> kill enough monsters -> boss. Bosses warn before big attacks (lanes, rings).
+- Projectiles have kinds and can be knocked out of the air by melee swings or shot down by magic/arrows.
+- Town NPCs (merchant, reforger, nurse, guide) in the safe zone; coins drop from monsters.
+
+**Art:** `python3 tools/make_sprites.py` regenerates all pixel-art sprites. Replace any PNG in `public/assets/` with your own.

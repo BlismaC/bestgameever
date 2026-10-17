@@ -11,4 +11,5 @@ services:
         value: 20
       - key: NODE_ENV
         value: production
+      # IMPORTANT for saved islands/characters: add DATABASE_URL (free Postgres, e.g. neon.tech) in the Render dashboard
       # Optional: set ADMIN_KEY in the Render dashboard to enable /admin commands in production
