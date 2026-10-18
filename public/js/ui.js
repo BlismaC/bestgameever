@@ -40,6 +40,8 @@ export function tipHTML(id, mod, extra) {
     L.push(`<div class="st"><b>${dmg}</b> ${w.rngd ? 'ranged' : 'melee'} damage ${m && m.d ? `<span class="${m.d > 0 ? 'up' : 'dn'}">(${sgn(m.d)}%)</span>` : ''}</div>`);
     L.push(`<div class="st">${crit}% critical strike chance ${m && m.c ? `<span class="up">(+${m.c}%)</span>` : ''}</div>`);
     L.push(`<div class="st">${(1 / w.cd).toFixed(1)} uses per second</div>`);
+    if (w.rng) L.push(`<div class="st">Reach: ${w.rng} · ${w.arc >= 140 ? 'very wide' : w.arc >= 100 ? 'wide' : w.arc >= 70 ? 'normal' : 'narrow'} swing</div>`);
+    if (w.pk) { const nm = { wave: 'a piercing sword wave', arrow: 'arrows', bolt: 'bolts', orb: 'an exploding orb', magic: 'magic bolts', page: 'magic pages', star: 'throwing stars', fire: 'fireballs', ice: 'ice shards', poison: 'poison globs', bone: 'bones', soul: 'souls', void: 'void bolts', eye: 'eyeballs', gel: 'gel', thorn: 'thorns' }[w.pk] || 'projectiles'; L.push(`<div class="up">Fires ${w.np > 1 ? w.np + ' ' : ''}${nm}${w.beh === 'homing' ? ' that home in on enemies' : w.beh === 'boomerang' ? ' that return to you' : w.beh === 'wave' ? ' in a weaving path' : ''}</div>`); }
     L.push(`<div class="st">${kbLabel(kb)} ${m && m.k ? `<span class="${m.k > 0 ? 'up' : 'dn'}">(${sgn(m.k)}%)</span>` : ''}</div>`);
     if (w.tool) L.push(`<div class="up">${w.tool === 'axe' ? 'Chops trees' : 'Mines rock and ore'} (tier ${it.t})</div>`);
     for (const [k, v] of w.fx || []) L.push(`<div class="up">${k === 'burn' ? `Sets enemies on fire (${v}/s)` : k === 'poison' ? `Poisons enemies (${v}/s)` : k === 'slow' ? 'Slows enemies' : `Steals ${Math.round(v * 100)}% of damage as life`}</div>`);

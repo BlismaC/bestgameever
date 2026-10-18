@@ -135,7 +135,7 @@ class Game {
       case 'drop': { const i = m.i | 0; const s = p.inv[i]; if (s && !p.room.island) { this.spawnDrop(s.id, s.count, p.x + Math.cos(p.angle) * 50, p.y + Math.sin(p.angle) * 50, 1.5, s.mod); p.inv[i] = null; this.sendInv(p); } break; }
       case 'trash': { const i = m.i | 0; if (p.inv[i]) { p.inv[i] = null; this.sendInv(p); } break; }
       case 'chat': this.chat(p, String(m.m || '')); break;
-      case 'ping': this.send(p, { t: 'pong', n: m.n }); break;
+      case 'ping': if (typeof m.rtt === 'number') p.rtt = clamp(m.rtt, 0, 400); this.send(p, { t: 'pong', n: m.n }); break;
       case 'place': this.place(p, +m.x, +m.y); break;
       case 'pickup': this.pickupStruct(p, +m.x, +m.y); break;
       case 'home': this.startTp(p); break;
@@ -518,7 +518,7 @@ class Game {
     const m = {
       id: nid(), type, def, x, y, angle: Math.random() * 6.28, hp: def.hp, maxHp: def.hp, r: def.radius, fx: {},
       nextAtk: 0, wanderUntil: 0, wa: 0, kvx: 0, kvy: 0, fleeUntil: 0, fleeFrom: null, lastHit: 0, boss: !!def.boss, pat: (def.patterns || []).map(() => this.time + rand(3, 5)),
-      phase: 0, shiny: false, dmgMul: 1, dropMul: 1, idle: 0, air: opts.air || 0, evt: !!opts.evt, pend: null, hasTarget: false,
+      phase: 0, shiny: false, dmgMul: 1, dropMul: 1, idle: 0, hist: [], draw: null, air: opts.air || 0, evt: !!opts.evt, pend: null, hasTarget: false,
     };
     const z = this.world.zone(x, y); m.zone = z; m.xpMul = 1 + z * 1.5;
     if (def.boss) { m.maxHp = m.hp = Math.round(def.hp * (1 + z * 0.5)); m.dmgMul = 1 + z * 0.3; }
@@ -595,6 +595,14 @@ class Game {
   fxFlags(e) { return (e.fx.burn ? 1 : 0) | (e.fx.poison ? 2 : 0) | (e.fx.slow ? 4 : 0); }
 
   // ------------------------------------------------------------ combat
+  // Lag compensation: a player sees mobs ~(rtt/2 + interpolation delay) in the past, so melee tests use where the mob WAS on their screen.
+  rewindFor(p) { return clamp((p.rtt || 0) / 2000 + 0.08, 0.05, 0.3); }
+  posAt(m, rew) {
+    const h = m.hist, tt = this.time - rew; if (!h.length || tt >= h[h.length - 1][0]) return { x: m.x, y: m.y };
+    if (tt <= h[0][0]) return { x: h[0][1], y: h[0][2] };
+    for (let i = h.length - 1; i > 0; i--) if (h[i - 1][0] <= tt) { const a = h[i - 1], b = h[i], f = (tt - a[0]) / Math.max(1e-6, b[0] - a[0]); return { x: a[1] + (b[1] - a[1]) * f, y: a[2] + (b[2] - a[2]) * f }; }
+    return { x: m.x, y: m.y };
+  }
   weaponStats(p) {
     const s = p.inv[p.sel], def = s && content.items[s.id], w = def && def.weapon ? def.weapon : content.HAND;
     const m = s && s.mod ? content.modById[s.mod] : null;
@@ -612,7 +620,7 @@ class Game {
       const pr = w.projectile, n = pr.count || 1;
       for (let i = 0; i < n; i++) {
         const off = n > 1 ? (i / (n - 1) - 0.5) * pr.spread : (Math.random() - 0.5) * pr.spread, crit = Math.random() * 100 < st.crit;
-        this.shoot('p', p.id, p.x + Math.cos(a) * 30, p.y + Math.sin(a) * 30, a + off, pr, st.dmg * (crit ? 2 : 1), w.fx, p.name, crit);
+        this.shoot('p', p.id, p.x + Math.cos(a) * 30, p.y + Math.sin(a) * 30, a + off, pr.colors ? { ...pr, color: pr.colors[i % pr.colors.length] } : pr, st.dmg * (crit ? 2 : 1), w.fx, p.name, crit);
       }
     }
   }
@@ -631,8 +639,10 @@ class Game {
     }
     this.projectiles = kept;
     const roll = () => { const c = Math.random() * 100 < st.crit; return [st.dmg * (c ? 2 : 1), c]; };
+    const rew = this.rewindFor(p);
     for (const mob of this.mobs.values()) {
-      if (mob.air > 0 || !inArc(mob.x, mob.y, mob.r)) continue;
+      if (mob.air > 0) continue; const q = this.posAt(mob, rew);
+      if (!inArc(q.x, q.y, mob.r)) continue;
       const [dd, c] = roll(); this.hurtMob(mob, dd, p, a, knock, c);
       if (w.fx) { this.applyFx(mob, w.fx); mob.lastHit = p.id; if (w.fx.lifesteal) p.hp = Math.min(p.maxHp, p.hp + dd * w.fx.lifesteal); }
     }
@@ -672,8 +682,32 @@ class Game {
   shoot(owner, ownerId, x, y, ang, pr, dmg, fx, srcName, crit) {
     this.projectiles.push({
       id: nid(), owner, ownerId, x, y, vx: Math.cos(ang) * pr.speed, vy: Math.sin(ang) * pr.speed, r: pr.radius, kind: pr.kind || 'orb',
-      dmg, hp: dmg, life: pr.life, color: pr.color || '#fff', pierce: pr.pierce || 0, explode: pr.explode || 0, heavy: !!pr.heavy, fx: fx || pr.fx || null, hit: new Set(), src: srcName || '', crit: !!crit,
+      dmg, hp: dmg, life: pr.beh === 'boomerang' ? 9 : pr.life, color: pr.color || '#fff', pierce: pr.beh === 'boomerang' ? 99 : (pr.pierce || 0), explode: pr.explode || 0, heavy: !!pr.heavy,
+      fx: fx || pr.fx || null, hit: new Set(), src: srcName || '', crit: !!crit,
+      beh: pr.beh || null, turn: pr.turn || 3, amp: pr.amp || 24, freq: pr.freq || 6, spd: pr.speed, life0: pr.life, age: 0, back: false, sx: x, sy: y, dx: Math.cos(ang), dy: Math.sin(ang),
     });
+  }
+  homingTarget(pj) {
+    let best = null, bd = 520;
+    if (pj.owner === 'p') { for (const m of this.mobs.values()) { if (m.air > 0 || m.hp <= 0) continue; const d = dist(pj.x, pj.y, m.x, m.y); if (d < bd) { bd = d; best = m; } } }
+    else for (const o of this.main.players) { if (!o.alive) continue; const d = dist(pj.x, pj.y, o.x, o.y); if (d < bd) { bd = d; best = o; } }
+    return best;
+  }
+  steerProjectile(pj, dt) {
+    pj.age += dt;
+    if (pj.beh === 'wave') { const off = Math.sin(pj.age * pj.freq) * pj.amp, d = pj.spd * pj.age; pj.x = pj.sx + pj.dx * d - pj.dy * off; pj.y = pj.sy + pj.dy * d + pj.dx * off; return; }
+    if (pj.beh === 'homing') {
+      const t = this.homingTarget(pj);
+      if (t) { const ca = Math.atan2(pj.vy, pj.vx); let d = Math.atan2(t.y - pj.y, t.x - pj.x) - ca; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; const na = ca + clamp(d, -pj.turn * dt, pj.turn * dt); pj.vx = Math.cos(na) * pj.spd; pj.vy = Math.sin(na) * pj.spd; }
+    } else if (pj.beh === 'boomerang') {
+      if (!pj.back && pj.age > pj.life0 * 0.5) { pj.back = true; pj.hit.clear(); }
+      if (pj.back) {
+        const o = this.players.get(pj.ownerId);
+        if (!o || !o.alive || dist(pj.x, pj.y, o.x, o.y) < 30 || pj.age > pj.life0 * 3) { pj.life = 0; pj.explode = 0; return; }
+        const a = Math.atan2(o.y - pj.y, o.x - pj.x); pj.vx = Math.cos(a) * pj.spd * 1.15; pj.vy = Math.sin(a) * pj.spd * 1.15;
+      }
+    }
+    pj.x += pj.vx * dt; pj.y += pj.vy * dt;
   }
   explode(pj, x, y) {
     const R = pj.explode; this.events.push({ e: 'boom', rm: 'main', x: rd(x), y: rd(y), r: R });
@@ -699,7 +733,7 @@ class Game {
     const out = [];
     for (const pj of this.projectiles) {
       if (pj.hp <= 0) continue;
-      pj.x += pj.vx * dt; pj.y += pj.vy * dt; pj.life -= dt;
+      this.steerProjectile(pj, dt); if (pj.beh !== 'boomerang') pj.life -= dt;
       let dead = pj.life <= 0 || pj.x < 0 || pj.y < 0 || pj.x > this.size || pj.y > this.size;
       if (!dead) {
         if (pj.owner === 'p') {
@@ -708,7 +742,7 @@ class Game {
             if (m.air > 0 || pj.hit.has(m.id) || dist(pj.x, pj.y, m.x, m.y) > m.r + pj.r) continue;
             pj.hit.add(m.id);
             if (!pj.explode) {
-              this.hurtMob(m, pj.dmg, owner, Math.atan2(pj.vy, pj.vx), 80, pj.crit);
+              this.hurtMob(m, pj.dmg, owner, Math.atan2(pj.vy, pj.vx), 80, pj.crit); this.events.push({ e: 'imp', rm: 'main', x: rd(pj.x), y: rd(pj.y), k: pj.kind, c: pj.color });
               if (pj.fx) { this.applyFx(m, pj.fx); if (owner && pj.fx.lifesteal) owner.hp = Math.min(owner.maxHp, owner.hp + pj.dmg * pj.fx.lifesteal); }
             }
             if (pj.pierce-- <= 0) { dead = true; break; }
@@ -716,13 +750,13 @@ class Game {
           if (!dead && C.PVP) for (const o of this.main.players) {
             if (o.id === pj.ownerId || !o.alive || pj.hit.has(o.id) || this.inSafe(o.x, o.y) || dist(pj.x, pj.y, o.x, o.y) > C.PLAYER.radius + pj.r) continue;
             pj.hit.add(o.id);
-            if (!pj.explode) { this.hurtPlayer(o, pj.dmg, pj.src, pj.fx); if (!o.alive && owner) { owner.kills++; this.giveXp(owner, 20 + o.level * 10); } }
+            if (!pj.explode) { this.events.push({ e: 'imp', rm: 'main', x: rd(pj.x), y: rd(pj.y), k: pj.kind, c: pj.color }); this.hurtPlayer(o, pj.dmg, pj.src, pj.fx); if (!o.alive && owner) { owner.kills++; this.giveXp(owner, 20 + o.level * 10); } }
             if (pj.pierce-- <= 0) { dead = true; break; }
           }
         } else {
           for (const o of this.main.players) {
             if (!o.alive || dist(pj.x, pj.y, o.x, o.y) > C.PLAYER.radius + pj.r) continue;
-            if (!pj.explode) this.hurtPlayer(o, pj.dmg, pj.src, pj.fx);
+            if (!pj.explode) { this.events.push({ e: 'imp', rm: 'main', x: rd(pj.x), y: rd(pj.y), k: pj.kind, c: pj.color }); this.hurtPlayer(o, pj.dmg, pj.src, pj.fx); }
             dead = true; break;
           }
         }
@@ -749,11 +783,15 @@ class Game {
         m.angle = ang;
         if (d.behavior === 'ranged') {
           const R = d.ranged, spd = d.speed * slow;
-          if (dd < R.keep - 60) { m.x -= Math.cos(ang) * spd * dt; m.y -= Math.sin(ang) * spd * dt; }
-          else if (dd > R.keep + 40) { m.x += Math.cos(ang) * spd * dt; m.y += Math.sin(ang) * spd * dt; }
-          if (dd < R.range && t >= m.nextAtk) {
-            m.nextAtk = t + R.cd; const n = R.count || 1;
-            for (let i = 0; i < n; i++) { const off = n > 1 ? (i / (n - 1) - 0.5) * (R.spread || 0.3) : 0; this.shoot('m', m.id, m.x, m.y, ang + off, R.proj, R.proj.dmg * m.dmgMul, R.proj.fx, d.name); }
+          const fire = (aim) => { const n = R.count || 1; for (let i = 0; i < n; i++) { const off = n > 1 ? (i / (n - 1) - 0.5) * (R.spread || 0.3) : 0; this.shoot('m', m.id, m.x + Math.cos(aim) * m.r * 0.6, m.y + Math.sin(aim) * m.r * 0.6, aim + off, R.proj, R.proj.dmg * m.dmgMul, R.proj.fx, d.name); } };
+          if (m.draw) { if (t >= m.draw.at) { fire(m.draw.ang); m.draw = null; m.nextAtk = t + R.cd; } }
+          else {
+            if (dd < R.keep - 60) { m.x -= Math.cos(ang) * spd * dt; m.y -= Math.sin(ang) * spd * dt; }
+            else if (dd > R.keep + 40) { m.x += Math.cos(ang) * spd * dt; m.y += Math.sin(ang) * spd * dt; }
+            if (dd < R.range && t >= m.nextAtk) {
+              if (R.windup) { m.draw = { at: t + R.windup, ang }; this.events.push({ e: 'tele', rm: 'main', k: 'aim', x: rd(m.x), y: rd(m.y), a: Math.round(ang * 100) / 100, spread: R.spread || 0, n: R.count || 1, d: R.windup, id: m.id, r: m.r, len: Math.min(R.range, 720), small: 1 }); }
+              else { fire(ang); m.nextAtk = t + R.cd; }
+            }
           }
         } else {
           const spd = d.speed * slow;
@@ -935,7 +973,7 @@ class Game {
       if (regen && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + regen * dt);
       if (p.tp) { if (p.lastHurt > p.tp.hurt) this.cancelTp(p, 'Teleport interrupted!'); else if (this.time >= p.tp.at) this.goHome(p); }
     }
-    for (const m of [...this.mobs.values()]) this.updateMob(m, dt);
+    for (const m of [...this.mobs.values()]) { this.updateMob(m, dt); m.hist.push([this.time, m.x, m.y]); if (m.hist.length > 14) m.hist.shift(); }
     this.mobGrid.clear(); for (const m of this.mobs.values()) this.mobGrid.add(m);
     this.runStructures(dt);
     this.updateProjectiles(dt);

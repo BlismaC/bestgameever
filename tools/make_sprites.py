@@ -51,4 +51,5 @@ for k, rows in X.ICONS.items():
             col = X.PAL.get(ch)
             if col: pxs[x, y] = hexc(col)
     d = os.path.join(OUT, 'buffs'); os.makedirs(d, exist_ok=True); im.resize((64, 64), Image.NEAREST).save(os.path.join(d, k + '.png')); n += 1
+import runpy; runpy.run_path(os.path.join(os.path.dirname(__file__), 'make_fusions.py'))
 print('generated', n, 'pixel sprites ->', os.path.abspath(OUT))

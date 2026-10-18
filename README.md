@@ -89,3 +89,14 @@ Profiles (inventory, level, xp) and private islands (buildings, chests, guest li
 - Town NPCs (merchant, reforger, nurse, guide) in the safe zone; coins drop from monsters.
 
 **Art:** `python3 tools/make_sprites.py` regenerates all pixel-art sprites. Replace any PNG in `public/assets/` with your own.
+
+## v0.5 — combat feel
+- **Hit accuracy:** lag compensation for melee (the server checks where the mob *appeared* on your screen), sprites are auto-fitted to their hitboxes,
+  weapon sprites are drawn exactly as long as their real reach. **F3** shows all hitboxes and the swing wedge.
+- **Reach:** dagger 50 · axe 65 · sword 70 · hammer 75 · scythe 90 · spear 115 · whip 135 · fusion swords 105-125 (see `content/archetypes.js`, `content/fusions.js`).
+- **Fusion weapons** (`server/content/fusions.js`): combine other weapons + boss drops at a high-tier station.
+  Verdant Edge = Emerald Sword + Jade Sword + Pharaoh's Khopesh (+8 Emerald) -> fires a piercing green sword wave.
+  Glacial Reaver / Infernal Edge are the ice and fire versions; Prismatic Edge combines all three (3 waves per swing); Tempest Staff fires homing bolts.
+  Art: `tools/src/verdant_edge.png` is the source sprite; `python3 tools/make_sprites.py` builds hue variants + the held (rotated) versions.
+- **Projectile behaviours:** `beh: 'homing' | 'boomerang' | 'wave'` in any projectile definition. Kinds are drawn individually (arrow, wave, fire, ice, poison, soul, void ...) with their own impact effects.
+- **Ranged mobs** draw their bow first (warning line), then fire real arrows / poison / fire. Swords cut enemy projectiles out of the air; arrows and magic shoot them down.

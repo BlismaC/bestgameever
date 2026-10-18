@@ -14,6 +14,7 @@ const bossesData = require('./bosses');
 const structures = require('./structures');
 const events = require('./events');
 const npcs = require('./npcs');
+const fusions = require('./fusions');
 
 const items = {};
 const recipes = {};
@@ -69,6 +70,15 @@ for (const [id, [name, aId, tier, color, dmgMul, fx, extra]] of Object.entries(s
   if (fx) { w.fx = {}; for (const [k, v] of Object.entries(fx)) w.fx[k] = v; }
   const rarity = x.rarity || (id.match(/^(bovine|egg|croak|slimy|goblin_shiv|fang|widow|bone_c|rotten|bandit|sting|wrap|yeti|frost|witch|imp|magma_m|soul_r|wyvern|eye_s)/) ? 'rare' : 'epic');
   items[id] = { id, name, emoji: a.emoji, color, type: 'weapon', rarity, tier, stack: 1, desc: x.desc, weapon: w, arch: aId, unique: true, value: Math.round(dmg * 6) };
+}
+// ---- fusion weapons (crafted from other weapons)
+for (const [id, [name, aId, tier, color, dmgMul, fx, x, cost, station]] of Object.entries(fusions)) {
+  const a = archById[aId], dmg = r1(a.dmg * TIERDMG[tier] * dmgMul);
+  const proj = x.proj ? { ...x.proj, color } : (a.projectile ? { ...a.projectile, color } : null);
+  const w = { dmg, cooldown: x.cd || a.cd, crit: x.crit !== undefined ? x.crit : a.crit, melee: x.melee || a.melee || null, projectile: proj, toolTier: tier, tool: null };
+  if (fx) w.fx = { ...fx };
+  items[id] = { id, name, emoji: a.emoji, color, type: 'weapon', rarity: x.rarity || 'epic', tier, stack: 1, desc: x.desc, weapon: w, arch: aId, unique: true, fusion: true, value: Math.round(dmg * 12) };
+  recipes[id] = { id, out: id, count: 1, cost, station };
 }
 // Forged uniques (craftable): hellstone gear
 recipes.volcano = { id: 'volcano', out: 'volcano', count: 1, cost: { hellstone: 22, obsidian: 8, iron: 10, leather: 4 }, station: 'forge' };
@@ -162,7 +172,7 @@ function clientPayload() {
     if (it.place) o.pl = 1;
     if (it.weapon) {
       const w = it.weapon;
-      o.w = { dmg: w.dmg, cd: w.cooldown, crit: w.crit || 0, kb: w.melee ? w.melee.knock : (w.projectile ? 80 : 0), rng: w.melee ? w.melee.range : 0, arc: w.melee ? w.melee.arc : 0, rngd: w.projectile ? 1 : 0, tool: w.tool || null, pk: w.projectile ? w.projectile.kind : null };
+      o.w = { dmg: w.dmg, cd: w.cooldown, crit: w.crit || 0, kb: w.melee ? w.melee.knock : (w.projectile ? 80 : 0), rng: w.melee ? w.melee.range : 0, arc: w.melee ? w.melee.arc : 0, rngd: w.projectile ? 1 : 0, tool: w.tool || null, pk: w.projectile ? w.projectile.kind : null, beh: w.projectile ? w.projectile.beh || null : null, np: w.projectile ? w.projectile.count || 1 : 0 };
       if (w.fx) o.w.fx = Object.entries(w.fx).map(([k, v]) => (k === 'lifesteal' ? ['lifesteal', v] : [k, v.dps || v.mult]));
       if (it.arch) o.a = it.arch;
     }

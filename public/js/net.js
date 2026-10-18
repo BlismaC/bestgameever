@@ -22,7 +22,7 @@ export async function connect(name, look, onFail) {
   ws.onopen = () => send({ t: 'join', name, look, token: token() });
   ws.onmessage = (e) => handle(JSON.parse(e.data));
   ws.onclose = () => { if (S.joined) { ui.chat('Disconnected from server. Reload the page.', true); } else onFail('Connection failed.'); S.joined = false; };
-  setInterval(() => send({ t: 'ping', n: performance.now() }), 2000);
+  setInterval(() => send({ t: 'ping', n: performance.now(), rtt: S.ping }), 2000);
 }
 
 function handle(m) {
@@ -122,6 +122,7 @@ function snapshot(m) {
       case 'parry': FX.sparks(e.x, e.y, e.c || '#fff', 9); S.fx.push({ k: 'clang', x: e.x, y: e.y, t: 0 }); break;
       case 'land': FX.dust(e.x, e.y + 10, 2.4); FX.dust(e.x + 10, e.y + 6, 2); FX.shake.m = Math.max(FX.shake.m, 2); break;
       case 'tele': S.tele.push({ ...e, t: 0 }); break;
+      case 'imp': FX.impact(e.k, e.x, e.y, e.c); break;
       case 'sadd': setStruct(e.s); FX.dust(e.x, e.y, 2); FX.dust(e.x + 8, e.y + 4, 2); break;
       case 'sdel': { const s = S.structs.get(e.id); S.structs.delete(e.id); const d = s && S.content.structures[s.type]; FX.chips(e.x, e.y, d ? d.c : '#aaa', 12); FX.dust(e.x, e.y, 2); break; }
       case 'shit': { const s = S.structs.get(e.id); if (s) { s.hp = e.hp; s.max = e.max; } S.structHit.set(e.id, { t: 0 }); const d = s && S.content.structures[s.type]; FX.chips(e.x, e.y, d ? d.c : '#aaa', 3); break; }

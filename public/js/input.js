@@ -21,6 +21,7 @@ export function init() {
     if (!S.joined) return;
     if (typing()) { if (e.key === 'Escape') { document.activeElement.blur(); ui.closeChat(); } return; }
     const k = e.key.toLowerCase();
+    if (e.key === 'F3') { S.debug = !S.debug; e.preventDefault(); return; }
     if (map[k]) { input.keys[map[k]] = 1; e.preventDefault(); return; }
     if (e.key === ' ') { input.dash = true; e.preventDefault(); }
     else if (e.key === 'Enter') { ui.openChat(); e.preventDefault(); }

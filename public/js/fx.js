@@ -26,6 +26,18 @@ export function boom(x, y, rad) {
 export function trail(x, y, color, size = 3) { add({ k: 'dot', x: x + (r() - 0.5) * 6, y: y + (r() - 0.5) * 6, vx: (r() - 0.5) * 20, vy: (r() - 0.5) * 20, life: 0.28, max: 0.28, size, color, drag: 3 }); }
 export function pluses(x, y, color = '#7dff8a') { for (let i = 0; i < 7; i++) add({ k: 'plus', x: x + (r() - 0.5) * 34, y: y + (r() - 0.5) * 20, vx: (r() - 0.5) * 20, vy: -30 - r() * 50, life: 0.9, max: 0.9, size: 5 + r() * 3, color, drag: 1 }); }
 export function leaves(x, y, color) { for (let i = 0; i < 5; i++) add({ k: 'chip', x, y, vx: (r() - 0.5) * 120, vy: (r() - 0.5) * 120, rot: r() * 6, vr: (r() - 0.5) * 8, life: 0.7, max: 0.7, size: 5, color, drag: 3 }); }
+export function impact(kind, x, y, color) {
+  const col = color || '#fff';
+  switch (kind) {
+    case 'arrow': case 'bolt': case 'thorn': for (let i = 0; i < 5; i++) { const a = r() * TAU, s = 60 + r() * 120; add({ k: 'chip', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, rot: r() * 6, vr: (r() - 0.5) * 12, life: 0.45, max: 0.45, size: 3 + r() * 3, color: kind === 'thorn' ? '#6fbf3a' : '#c9a070', drag: 4 }); } dust(x, y, 0.6); break;
+    case 'fire': for (let i = 0; i < 9; i++) { const a = r() * TAU, s = 50 + r() * 140; add({ k: 'dot', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 30, life: 0.5 + r() * 0.3, max: 0.8, size: 2.5 + r() * 3, color: r() < 0.5 ? '#ffd23f' : '#ff6a1a', drag: 3 }); } add({ k: 'puff', x, y, vx: 0, vy: -20, life: 0.6, max: 0.6, size: 9, color: '#443', drag: 2 }); break;
+    case 'ice': for (let i = 0; i < 8; i++) { const a = r() * TAU, s = 70 + r() * 130; add({ k: 'chip', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, rot: r() * 6, vr: (r() - 0.5) * 14, life: 0.55, max: 0.55, size: 4 + r() * 4, color: r() < 0.5 ? '#e6fbff' : '#7ac8ff', drag: 3.5 }); } break;
+    case 'poison': case 'gel': case 'egg': for (let i = 0; i < 8; i++) { const a = r() * TAU, s = 40 + r() * 110; add({ k: 'dot', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.55, max: 0.55, size: 3 + r() * 3, color: col, drag: 3.5 }); } add({ k: 'puff', x, y, vx: 0, vy: 0, life: 0.6, max: 0.6, size: 8, color: col, drag: 2 }); break;
+    case 'wave': add({ k: 'ring', x, y, life: 0.28, max: 0.28, size: 34, color: col }); sparks(x, y, col, 8); sparks(x, y, '#ffffff', 4); break;
+    case 'bone': for (let i = 0; i < 5; i++) { const a = r() * TAU, s = 60 + r() * 100; add({ k: 'chip', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, rot: r() * 6, vr: 10, life: 0.5, max: 0.5, size: 4, color: '#ece7d6', drag: 4 }); } break;
+    default: add({ k: 'ring', x, y, life: 0.25, max: 0.25, size: 26, color: col }); sparks(x, y, col, 7);
+  }
+}
 export function update(dt) {
   shake.m *= Math.exp(-dt * 9); if (shake.m < 0.2) shake.m = 0;
   for (let i = P.length - 1; i >= 0; i--) {

@@ -116,6 +116,32 @@ ok([...p.room.structMap.values()].some((s) => s.owner === guest.own), 'guest can
   g.projectiles = []; p.hp = 9999; g.shoot('m', 0, p.x + 40, p.y, Math.PI, { speed: 10, life: 3, radius: 8, kind: 'bolt', color: '#f00' }, 10, null, 'x');
   say(p, '/give iron_sword 1'); const si = p.inv.findIndex((s) => s && s.id === 'iron_sword'); g.handle(p, { t: 'swap', a: si, b: 8 }); p.sel = 8; p.angle = 0; g.time += 2; g.attack(p);
   ok(g.projectiles.length === 0, 'sword swing destroys enemy projectiles');
+
+  // ---- fusion weapons, projectile behaviours, ranged mob wind-up, lag compensation
+  const F = await g.join(mk().ws, { token: 'f'.repeat(32), name: 'Fuser' });
+  F.x = g.size / 2 + 1500; F.y = g.size / 2 + 1500; for (const r of g.world.res) if (Math.hypot(r.x - F.x, r.y - F.y) < 600) r.alive = false;
+  g.moveToRoom(F, g.main, { x: F.x, y: F.y });
+  const sayF = (c) => { g.time += 0.5; g.handle(F, { t: 'chat', m: c }); };
+  for (const c of ['/give emerald_sword 1', '/give jade_sword 1', '/give khopesh 1', '/give emerald 8', '/give leather 4', '/give workbench 1', '/give arcane_altar 1']) sayF(c);
+  g.addStruct(g.main, 'arcane_altar', F.x + 60, F.y, { owner: F.own });
+  g.handle(F, { t: 'craft', id: 'verdant_edge' }); ok(g.countItem(F, 'verdant_edge') === 1 && g.countItem(F, 'jade_sword') === 0, 'fusion: Verdant Edge crafted from swords + boss drop (ingredients consumed)');
+  const vi = F.inv.findIndex((s2) => s2 && s2.id === 'verdant_edge'); g.handle(F, { t: 'swap', a: vi, b: 8 }); F.sel = 8; F.angle = 0; g.mobs.clear(); g.projectiles = []; g.time += 2; g.attack(F);
+  ok(g.projectiles.some((pj) => pj.kind === 'wave' && pj.pierce === 4), 'Verdant Edge swing fires a piercing sword wave');
+  const pr3 = content.items.prismatic_edge.weapon.projectile; ok(pr3.count === 3 && pr3.colors.length === 3, 'Prismatic Edge fires 3 coloured waves');
+  // homing + boomerang + wave
+  g.mobs.clear(); g.projectiles = []; const tgt = g.spawnMob('cow', F.x + 300, F.y + 120, { noShiny: true }); tgt.hp = tgt.maxHp = 9999;
+  g.shoot('p', F.id, F.x, F.y, 0, { kind: 'magic', speed: 400, life: 2, radius: 8, beh: 'homing', turn: 4, color: '#fff' }, 10, null, 'x');
+  tgt.fleeUntil = 0; for (let i = 0; i < 30; i++) { g.mobs.forEach((m2) => { if (m2 !== tgt) g.mobs.delete(m2.id); }); g.tick(0.05); } ok(tgt.hp < 9999, 'homing projectile curves into its target');
+  g.projectiles = []; g.shoot('p', F.id, F.x, F.y, 0, { kind: 'bone', speed: 500, life: 1, radius: 8, beh: 'boomerang', color: '#fff' }, 5, null, 'x'); let far = 0, back = false;
+  for (let i = 0; i < 60; i++) { g.tick(0.05); const pj = g.projectiles[0]; if (pj) far = Math.max(far, pj.x - F.x); else { back = true; break; } } ok(far > 150 && back, 'boomerang flies out and returns to its owner');
+  g.projectiles = []; g.shoot('m', 0, F.x - 400, F.y, 0, { kind: 'poison', speed: 300, life: 2, radius: 8, beh: 'wave', amp: 30, freq: 6, color: '#7f7' }, 5, null, 'x'); const ys = []; for (let i = 0; i < 12; i++) { g.tick(0.05); if (g.projectiles[0]) ys.push(g.projectiles[0].y); } ok(Math.max(...ys) - Math.min(...ys) > 10, 'wave projectile weaves');
+  const skel = g.spawnMob('skeleton', F.x + 300, F.y, { noShiny: true }); g.mobs.forEach((m2) => { if (m2 !== skel) g.mobs.delete(m2.id); }); g.projectiles = []; F.hp = F.maxHp = 9999; skel.nextAtk = 0; let sawDraw = false, sawArrow = false;
+  for (let i = 0; i < 70; i++) { g.tick(0.05); if (skel.draw) sawDraw = true; if (g.projectiles.some((pj) => pj.owner === 'm' && pj.kind === 'arrow')) sawArrow = true; }
+  ok(sawDraw && sawArrow, 'skeleton archers draw their bow, then shoot real arrows');
+  // lag compensation: mob moved 100px away in the last 150ms -> a swing still connects where the player saw it
+  g.mobs.clear(); F.rtt = 200; const mv = g.spawnMob('cow', F.x + 60, F.y, { noShiny: true }); mv.hp = mv.maxHp = 500; for (let i = 0; i < 3; i++) { mv.hist.push([g.time - 0.3 + i * 0.05, F.x + 60, F.y]); } mv.x = F.x + 260; mv.hist.push([g.time, F.x + 260, F.y]);
+  F.sel = 8; F.angle = 0; g.time += 2; mv.hist.length = 0; mv.hist.push([g.time - 0.3, F.x + 20, F.y], [g.time, F.x + 260, F.y]); const hpBefore = mv.hp; g.attack(F);
+  ok(mv.hp < hpBefore, 'lag compensation: swing hits where the mob appeared on the attacker\'s screen');
   ok(content.validate().length === 0, 'content valid: ' + content.validate().join(';'));
   console.log(fail ? `${fail} FAILED` : 'ALL PASSED'); fs.rmSync(dir, { recursive: true, force: true }); process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

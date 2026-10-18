@@ -9,7 +9,7 @@ module.exports = {
   MAX_PLAYERS: 80,
   RESOURCE_CELL: 190,        // resources are placed on a jittered grid -> evenly spread, never stacked
   PLAYER: {
-    radius: 22, speed: 230, hp: 100, hpPerLevel: 12,
+    radius: 16, speed: 230, hp: 100, hpPerLevel: 12,
     regenDelay: 5, regen: 2,
     dashSpeed: 720, dashTime: 0.18, dashCooldown: 1.6,
     invSize: 30, hotbar: 9, pickupRadius: 60,

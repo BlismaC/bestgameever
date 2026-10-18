@@ -17,3 +17,4 @@ Tuning (size multipliers, rotate vs flip) lives in public/js/assetcfg.js
 
 buffs/<buffId>.png      16x16 pixel icons shown above the health bar (regeneration, swiftness, burning, potion_sickness ...)
 structures/<id>.png     placeable objects (workbench, forge, chest, wall_*, spikes_*, bear_trap)
+held/<itemId>.png        Optional: sprite used while HELD in the hand (points RIGHT, hilt left). items/<id>.png stays the inventory icon (any angle).
