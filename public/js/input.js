@@ -15,6 +15,13 @@ function interact() {
   for (const st of S.structs.values()) { if (st.type !== 'chest') continue; const d = Math.hypot(st.x - me.x, st.y - me.y); if (d < Math.min(bd, 260)) { bd = d; best = { t: 'chest_open', id: st.id }; } }
   if (best) send(best);
 }
+// right-click on a chest or town NPC (near the cursor AND near you) opens it; otherwise right-click = use item
+function rightClickInteract() {
+  const w = worldCursor(), me = S.me; if (!me) return false;
+  for (const n of S.npcs) if (Math.hypot(n.x - w.x, n.y - w.y) < 60 && Math.hypot(n.x - me.x, n.y - me.y) < 240) { send({ t: 'npc', id: n.id }); return true; }
+  for (const st of S.structs.values()) if (st.type === 'chest' && Math.hypot(st.x - w.x, st.y - w.y) < 50 && Math.hypot(st.x - me.x, st.y - me.y) < 280) { send({ t: 'chest_open', id: st.id }); return true; }
+  return false;
+}
 export function init() {
   const typing = () => document.activeElement && document.activeElement.tagName === 'INPUT';
   addEventListener('keydown', (e) => {
@@ -40,7 +47,10 @@ export function init() {
   addEventListener('blur', () => { input.keys = { u: 0, d: 0, l: 0, r: 0 }; input.atk = false; });
   const cv = document.getElementById('game');
   addEventListener('mousemove', (e) => { input.mx = e.clientX; input.my = e.clientY; });
-  cv.addEventListener('mousedown', (e) => { if (e.button === 0) { input.atk = true; input.click = true; } else if (e.button === 2) send({ t: 'use' }); });
+  cv.addEventListener('mousedown', (e) => {
+    if (e.button === 0) { input.atk = true; input.click = true; }
+    else if (e.button === 2) { if (!rightClickInteract()) send({ t: 'use' }); }
+  });
   addEventListener('mouseup', (e) => { if (e.button === 0) input.atk = false; });
   cv.addEventListener('contextmenu', (e) => e.preventDefault());
   addEventListener('wheel', (e) => { if (!S.joined || typing()) return; select((S.sel + (e.deltaY > 0 ? 1 : 8)) % 9); }, { passive: true });

@@ -4,6 +4,7 @@ import * as FX from './fx.js';
 import cfgA from './assetcfg.js';
 import { nearRes } from './world.js';
 import { drawHuman } from './look.js';
+import { statusIcon } from './status.js';
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
@@ -33,7 +34,9 @@ function hash2(a, b, s = 0) { let h = (a * 374761393 + b * 668265263 + s * 14426
 // ---------------------------------------------------------------- ground (cached chunks, soft biome edges, decorations)
 const CH = 512, T = 32, N = CH / T, CPX = 640;
 const chunks = new Map();
-function deco(g, id, x, y, wx, wy, b) {
+const DECO_GROUP = { darkwood: 'swamp', jungle: 'forest', deep_jungle: 'forest', badlands: 'desert', scorched: 'volcanic', blightfen: 'swamp', moors: 'swamp', cursed: 'swamp', glacier: 'snow', highlands: 'desert', peaks: 'snow' };
+function deco(g, id0, x, y, wx, wy, b) {
+  const id = DECO_GROUP[id0] || id0;
   const h1 = hash2(wx, wy, 11), h2 = hash2(wx, wy, 23), h3 = hash2(wx, wy, 37);
   switch (id) {
     case 'plains': case 'forest': case 'swamp':
@@ -81,8 +84,23 @@ function buildChunk(cx, cy) {
       g.fillStyle = gr; g.fillRect(x, y, T, T);
     }
   }
+  // lakes: shallow (light) and deep (dark) water, 16px sub-tiles on the shoreline, sand on the banks
+  const wet = new Uint8Array(N * N), wat = (x, y) => S.gen.waterAt(x, y);
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
     const wx = cx * CH + i * T, wy = cy * CH + j * T; if (wx >= S.size || wy >= S.size) continue;
+    const w0 = wat(wx + T / 2, wy + T / 2), ws = [wat(wx + 2, wy + 2), wat(wx + T - 2, wy + 2), wat(wx + 2, wy + T - 2), wat(wx + T - 2, wy + T - 2)];
+    const WC = ['', '#5cc0e8', '#2f80c4'];
+    if (ws.every((v) => v === w0)) { if (w0) { g.fillStyle = WC[w0]; g.fillRect(i * T, j * T, T + 1, T + 1); wet[j * N + i] = w0; } }
+    else for (let sj = 0; sj < 2; sj++) for (let si = 0; si < 2; si++) { const w = wat(wx + si * 16 + 8, wy + sj * 16 + 8); if (w) { g.fillStyle = WC[w]; g.fillRect(i * T + si * 16, j * T + sj * 16, 17, 17); wet[j * N + i] = Math.max(wet[j * N + i], w); } }
+    if (wet[j * N + i]) { const h = hash2((wx / T) | 0, (wy / T) | 0, 21); if (h < 0.22) { g.fillStyle = w0 === 2 ? '#2670b0' : '#7ad4f4'; g.fillRect(i * T + 6 + h * 40, j * T + 8 + h * 60, 8, 2); } }
+  }
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    if (wet[j * N + i]) continue;
+    const near = (a, b) => a >= 0 && b >= 0 && a < N && b < N ? wet[b * N + a] : 0;
+    if (near(i + 1, j) || near(i - 1, j) || near(i, j + 1) || near(i, j - 1)) { g.fillStyle = 'rgba(232,214,160,.55)'; g.fillRect(i * T, j * T, T + 1, T + 1); }
+  }
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const wx = cx * CH + i * T, wy = cy * CH + j * T; if (wx >= S.size || wy >= S.size || wet[j * N + i]) continue;
     const id = idAt(i, j); deco(g, id, i * T, j * T, (wx / T) | 0, (wy / T) | 0, S.content.biomes[id]);
   }
   return c;
@@ -149,6 +167,26 @@ function drawNode(r, def, t) {
   if (hit && hit.t < 3 && hit.hp > 0) hpBar(x, y + R + 8, 46, hit.hp / hit.max, '#7ad06a');
 }
 
+// ---------------------------------------------------------------- armor / mounts / pals helpers
+function armorOf(eq) {
+  if (!eq) return null; const it = (id) => (id ? S.content.items[id] : null); const [h, c, l] = [it(eq[0]), it(eq[1]), it(eq[2])];
+  if (!h && !c && !l) return null;
+  const L = (x) => (x && x.ar ? x.ar.look : null);
+  const hl = L(h), cl = L(c), ll = L(l);
+  return { h: hl ? { pri: hl.pri, sec: hl.sec, trim: hl.trim, helm: hl.helm, glow: hl.glow } : null, c: cl ? { pri: cl.pri, sec: cl.sec, trim: cl.trim, chest: cl.chest, cape: cl.cape, wings: cl.wings, glow: cl.glow } : null, l: ll ? { pri: ll.pri, sec: ll.sec, trim: ll.trim } : null };
+}
+const palPos = new Map();
+function drawPal(id, species, px, py, dir, t) {
+  const img = A.get('pals/' + species); if (!img) return;
+  let st = palPos.get(id); if (!st) { st = { x: px - dir * 50, y: py + 10 }; palPos.set(id, st); }
+  const tx = px - dir * 54, ty = py + 14; st.x += (tx - st.x) * 0.12; st.y += (ty - st.y) * 0.12;
+  const work = S.palWork && S.palWork.pid === id && S.palWork.t < 0.4 ? 1 - S.palWork.t / 0.4 : 0;
+  const hop = Math.abs(Math.sin(t * 6 + id)) * (Math.hypot(tx - st.x, ty - st.y) > 8 ? 6 : 1.5) + work * 10;
+  shadow(st.x, st.y + 10, 14);
+  ctx.save(); ctx.translate(st.x, st.y - hop); if (px < st.x - 4) ctx.scale(-1, 1); ctx.rotate(work * Math.sin(t * 40) * 0.25); ctx.drawImage(img, -22, -26, 44, 44); ctx.restore();
+  if (work) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(st.x + dir * 20, st.y - 18, 8, 0, TAU); ctx.stroke(); }
+}
+
 // ---------------------------------------------------------------- mobs
 const BLOBS = new Set(['slime', 'slime_king', 'toad', 'void_horror', 'celestial_guardian']);
 function drawMob(m, t) {
@@ -184,9 +222,7 @@ function drawMob(m, t) {
     ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(bx - 7, by - 9, 5, 8, -0.4, 0, TAU); ctx.fill(); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(bx - 4, by + 24); ctx.lineTo(bx + 4, by + 24); ctx.lineTo(bx, by + 30); ctx.fill();
     return;
   }
-  if (m.fl & 1) emoji('🔥', m.x, m.y - R - 8, 16);
-  if (m.fl & 2) emoji('☠️', m.x - 12, m.y - R - 8, 14);
-  if (m.fl & 4) emoji('❄️', m.x + 12, m.y - R - 8, 14);
+  statusIcon(ctx, m.fl, m.x, m.y - R - 12, S);
   if (m.hp < m.mhp || def.b) hpBar(m.x, m.y + R + 10, Math.max(42, R * 1.7), m.hp / m.mhp, def.b ? '#ff4d4d' : '#e55');
 }
 
@@ -216,12 +252,18 @@ export function drawPlayer(p, self, t, held) {
   }
   if (p.dash) for (let k = 1; k <= 3; k++) { ctx.globalAlpha = 0.16 / k; drawHuman(ctx, { x: p.x - dir * 14 * k, y: p.y + 24, look: p.look, dir, aim: local, phase: p.ph, move: 1, u: 2.5 }); }
   ctx.globalAlpha = 1;
-  drawHuman(ctx, { x: p.x, y: p.y + 24, look: p.look, dir, aim: local + off + ext, phase: p.ph, move: Math.min(1, p.sp / 120), weapon: weaponDrawer(held), flash: p.flash, hat: p.hat, u: 2.5 });
-  if (p.fl & 1) emoji('🔥', p.x, p.y - 44, 16);
+  const mt = p.mount ? S.content.mounts[p.mount] : null, fly = mt && mt.f, lift = mt ? (fly ? 22 + Math.sin(t * 3 + p.id) * 3 : 8) : 0;
+  if (mt) {
+    const mimg = A.get('mounts/' + p.mount), msz = fly ? 84 : 78; ctx.globalAlpha = 0.25; shadow(p.x, p.y + 6, 22 + (fly ? 8 : 0)); ctx.globalAlpha = 1;
+    if (mimg) { ctx.save(); ctx.translate(p.x, p.y + 30 - lift * 0.55); ctx.scale(dir, 1); ctx.rotate(fly ? Math.sin(t * 3 + p.id) * 0.04 : 0); ctx.drawImage(mimg, -msz / 2, -msz / 2, msz, msz); ctx.restore(); }
+  }
+  if (p.pal) drawPal(p.id, p.pal, p.x, p.y, dir, t);
+  drawHuman(ctx, { x: p.x, y: p.y + 24 - lift, look: p.look, dir, aim: local + off + ext, phase: mt ? 0 : p.ph, move: mt ? 0 : Math.min(1, p.sp / 120), weapon: weaponDrawer(held), flash: p.flash, hat: p.hat, u: 2.5, armor: armorOf(p.equip) });
+  statusIcon(ctx, p.fl, p.x, p.y - 46 - lift, S);
   if (!self) {
     ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.lineWidth = 3;
-    const label = `${p.name || ''}  Lv${p.lv || 1}`; ctx.strokeText(label, p.x, p.y - 52); ctx.fillText(label, p.x, p.y - 52);
-    hpBar(p.x, p.y - 48, 50, p.hp / p.mhp, '#5fd35f');
+    const label = `${p.name || ''}  Lv${p.lv || 1}`; ctx.strokeText(label, p.x, p.y - 52 - lift); ctx.fillText(label, p.x, p.y - 52 - lift);
+    hpBar(p.x, p.y - 48 - lift, 50, p.hp / p.mhp, '#5fd35f');
   }
 }
 function drawNpc(n, t) {
@@ -347,6 +389,29 @@ function drawGhost(g, t, me) {
   if (d0.hr) { ctx.strokeStyle = 'rgba(255,160,60,.4)'; ctx.beginPath(); ctx.arc(g.x, g.y, d0.hr, 0, TAU); ctx.stroke(); }
 }
 
+// ---------------------------------------------------------------- lakes + waterfalls
+function drawWater(t, x0, y0, x1, y1) {
+  for (const L of S.gen.lakes) {
+    if (L.x + L.r * 1.4 < x0 || L.x - L.r * 1.4 > x1 || L.y + L.r * 1.4 < y0 || L.y - L.r * 1.4 > y1) continue;
+    for (let k = 0; k < 34; k++) {
+      const px = L.x + (hash2(k, (L.x | 0), 5) - 0.5) * L.r * 2.1, py = L.y + (hash2(k, (L.y | 0), 9) - 0.5) * L.r * 2.1;
+      if (px < x0 || px > x1 || py < y0 || py > y1 || !S.gen.waterAt(px, py)) continue;
+      const a = 0.5 + 0.5 * Math.sin(t * 2 + k * 1.7); ctx.globalAlpha = 0.18 + 0.35 * a; ctx.fillStyle = '#ffffff'; ctx.fillRect(px + Math.sin(t + k) * 4, py, 10 + a * 6, 2);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+function drawFall(f, t) {
+  const w = f.w, h = f.h, x = f.x, y = f.y;
+  ctx.fillStyle = '#5a5f68'; ctx.fillRect(x - w / 2 - 10, y - h - 20, w + 20, 26); ctx.fillStyle = '#7a808a'; ctx.fillRect(x - w / 2 - 10, y - h - 20, w + 20, 6);
+  ctx.fillStyle = '#4a4f58'; ctx.fillRect(x - w / 2 - 12, y - h - 14, 8, h); ctx.fillRect(x + w / 2 + 4, y - h - 14, 8, h);
+  const g = ctx.createLinearGradient(0, y - h, 0, y); g.addColorStop(0, '#9be0ff'); g.addColorStop(1, '#4aa8e0'); ctx.fillStyle = g; ctx.fillRect(x - w / 2, y - h - 6, w, h + 6);
+  ctx.fillStyle = 'rgba(255,255,255,.7)';
+  for (let i = 0; i < 9; i++) { const sx = x - w / 2 + 4 + i * (w - 8) / 8, off = ((t * 140 + i * 37) % (h + 30)); ctx.fillRect(sx, y - h - 6 + off, 4, 22 + (i % 3) * 8); }
+  ctx.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 7; i++) { const a = 0.5 + 0.5 * Math.sin(t * 5 + i * 2); ctx.beginPath(); ctx.arc(x - w / 2 + i * w / 6, y + 2 + Math.sin(t * 6 + i) * 3, 9 + a * 5, 0, TAU); ctx.fill(); }
+  if (Math.random() < 0.35) FX.dust(x + (Math.random() - 0.5) * w, y - 4, 1.4);
+}
+
 // ---------------------------------------------------------------- hitbox overlay (F3)
 function drawDebug(me, ang, held) {
   ctx.save(); ctx.lineWidth = 1.5; ctx.font = '10px monospace'; ctx.textAlign = 'center';
@@ -389,6 +454,7 @@ export function render(dt, t, me, myAngle, myHeld, lead) {
     ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(S.size / 2, S.size / 2, S.cfg.safe, 0, TAU); ctx.fill();
     ctx.setLineDash([16, 14]); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 3; ctx.stroke(); ctx.setLineDash([]);
   }
+  if (!island) drawWater(t, x0, y0, x1, y1);
   for (const f of S.tele) drawTele(f, t);
 
   // drops
@@ -417,8 +483,9 @@ export function render(dt, t, me, myAngle, myHeld, lead) {
   for (const f of under) f();
   for (const m of S.mobs.values()) ents.push([m.y, () => drawMob(m, t)]);
   for (const p of S.players.values()) ents.push([p.y, () => drawPlayer(p, false, t, p.held)]);
-  if (!island) for (const n of S.npcs) ents.push([n.y, () => drawNpc(n, t)]);
-  if (!S.dead) ents.push([me.y, () => drawPlayer({ id: S.id, x: me.x, y: me.y, angle: myAngle, face: me.face, fl: 0, dash: me.dashLeft > 0, sp: me.sp, ph: me.ph, look: S.look, flash: 0 }, true, t, myHeld)]);
+  for (const n of S.npcs) ents.push([n.y, () => drawNpc(n, t)]);
+  if (!island) for (const f of S.gen.falls) if (f.x > x0 - 120 && f.x < x1 + 120 && f.y > y0 - 40 && f.y < y1 + f.h + 40) ents.push([f.y, () => drawFall(f, t)]);
+  if (!S.dead) ents.push([me.y, () => drawPlayer({ id: S.id, x: me.x, y: me.y, angle: myAngle, face: me.face, fl: 0, dash: me.dashLeft > 0, sp: me.sp, ph: me.ph, look: S.look, flash: 0, equip: S.equip, mount: S.mount, pal: S.pal }, true, t, myHeld)]);
   ents.sort((a, b) => a[0] - b[0]); for (const e of ents) e[1]();
 
   for (const e of S.projs.values()) drawProj(e, t);

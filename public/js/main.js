@@ -9,12 +9,14 @@ import * as FX from './fx.js';
 import * as ui from './ui.js';
 import * as A from './assets.js';
 import { initMenu, look, stopMenu } from './menu.js';
+import * as Music from './music.js';
 
 const $ = (id) => document.getElementById(id);
 const nameEl = $('name');
 nameEl.value = localStorage.getItem('rf_name') || '';
 A.load().then(() => initMenu());
 function play() {
+  Music.start();
   $('play').disabled = true; $('menumsg').textContent = 'Connecting...';
   const n = nameEl.value.trim() || 'Wanderer'; localStorage.setItem('rf_name', n);
   connect(n, { ...look }, (msg) => ui.menuMsg(msg));
@@ -23,7 +25,18 @@ $('play').onclick = play;
 nameEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') play(); });
 initInput();
 
-let last = performance.now(), sendAcc = 0, dustAcc = 0;
+let last = performance.now(), sendAcc = 0, dustAcc = 0, moodAcc = 0;
+function pickMood() {
+  if (S.room.kind === 'island') return 'island';
+  const me = S.me; let boss = false; for (const m of S.mobs.values()) { const d = S.content.mobs[m.type]; if (d && d.b && Math.hypot(m.x - me.x, m.y - me.y) < 1400) { boss = true; break; } }
+  if (boss) return 'boss';
+  if (S.evt) return S.evt[0] === 'Blood Moon' ? 'bloodmoon' : S.evt[0] === 'Slime Rain' ? 'slimerain' : 'event';
+  if (Math.hypot(me.x - S.size / 2, me.y - S.size / 2) < S.cfg.safe + 200) return 'town';
+  const night = Math.cos(2 * Math.PI * (S.dayTime - 0.25)) < -0.2, b = S.content.biomes[S.gen.biomeAt(me.x, me.y)];
+  return night && (b.m === 'day' || b.m === 'forest') ? 'night' : (b.m || 'day');
+}
+// music controls
+{ const mb = $('mutebtn'), vol = $('vol'); if (mb) { const upd = () => { mb.textContent = Music.isEnabled() ? '♪ On' : '♪ Off'; }; upd(); mb.onclick = () => { Music.setEnabled(!Music.isEnabled()); Music.start(); upd(); }; vol.value = Math.round(Music.getVolume() * 100); vol.oninput = () => Music.setVolume(vol.value / 100); } }
 function frame(nowMs) {
   const dt = Math.min(0.05, Math.max(0.001, (nowMs - last) / 1000)); last = nowMs;
   const t = nowMs / 1000;
@@ -76,6 +89,7 @@ function frame(nowMs) {
     const lead = { x: (input.mx - innerWidth / 2) * 0.1, y: (input.my - innerHeight / 2) * 0.1 };
     render(dt, t, { x: rx, y: ry, hp: me.hp, mhp: me.mhp, flash: me.flash, dashLeft: me.dashLeft, sp: me.sp, ph: me.ph, face: me.face }, a, held, lead);
     ui.tick();
+    moodAcc += dt; if (moodAcc > 1) { moodAcc = 0; Music.setMood(pickMood()); }
   }
   requestAnimationFrame(frame);
 }

@@ -43,7 +43,7 @@ function handle(m) {
       break;
     }
     case 's': snapshot(m); break;
-    case 'inv': S.inv = m.inv; S.sel = m.sel; S.coins = m.inv.reduce((a, s) => a + (s && s[0] === 'coin' ? s[1] : 0), 0); ui.invChanged(); break;
+    case 'inv': S.inv = m.inv; S.sel = m.sel; if (m.eq) S.equip = m.eq; S.ar = m.ar || null; S.coins = m.inv.reduce((a, s) => a + (s && s[0] === 'coin' ? s[1] : 0), 0); ui.invChanged(); break;
     case 'coins': S.coins = m.c; ui.coinsChanged(); break;
     case 'chat': ui.chat(m.sys ? m.m : null, !!m.sys, m.from, m.m); break;
     case 'rs': { const r = S.res[m.id]; if (r) { r.alive = !!m.alive; if (!m.alive) { const d = S.content.nodes[r.type]; FX.chips(r.x, r.y, d.c2 || d.c, 12); } } break; }
@@ -51,7 +51,7 @@ function handle(m) {
     case 'dead': S.dead = true; FX.shake.m = 16; ui.dead(m.by, m['in']); break;
     case 'spawn': S.dead = false; S.me.init = false; S.cam.init = false; ui.respawn(); break;
     case 'pong': S.ping = Math.round(performance.now() - m.n); break;
-    case 'room': S.room = m; S.structs = new Map(); S.drops = []; S.mobs.clear(); S.projs.clear(); S.players.clear(); ui.roomChanged(); break;
+    case 'room': S.room = m; S.npcs = (m.npcs || []).map(([id, x, y]) => ({ ...S.content.npcs.find((n) => n.id === id), x, y })); S.structs = new Map(); S.drops = []; S.mobs.clear(); S.projs.clear(); S.players.clear(); ui.roomChanged(); break;
     case 'tp': S.tp = m.d ? performance.now() + m.d * 1000 : 0; S.tpTotal = m.d; break;
     case 'invite': ui.inviteToast(m); break;
     case 'banner': ui.banner(m.text, m.color); break;
@@ -75,7 +75,7 @@ function snapshot(m) {
   if (y.hp < me.hp - 0.5) me.flash = 1;
   me.hp = y.hp; me.mhp = y.mhp; me.xp = y.xp; me.xpn = y.xpn; me.lv = y.lv; me.sc = y.sc;
   reconcile(y);
-  S.buffs = y.b; S.healCd = y.hc; if (y.hc > S.healCdMax) S.healCdMax = y.hc; if (!y.hc) S.healCdMax = 1;
+  S.buffs = y.b; S.healCd = y.hc; S.breath = y.br; S.mount = y.mt; S.pal = y.pl; if (y.hc > S.healCdMax) S.healCdMax = y.hc; if (!y.hc) S.healCdMax = 1;
   S.evt = m.evt || null;
   if (S.dead && y.al) S.dead = false;
 
@@ -83,7 +83,7 @@ function snapshot(m) {
   for (const a of m.p) {
     const e = sync(S.players, sp, a[0], () => ({ id: a[0], x: a[1], y: a[2], angle: a[3], face: 1 }));
     if (a[4] < e.hp - 0.5) e.flash = 1;
-    e.hp = a[4]; e.mhp = a[5]; e.name = a[6]; e.held = a[7]; e.lv = a[8]; e.fl = a[9]; e.dash = a[10]; e.look = { s: a[11][0], h: a[11][1], c: a[11][2], p: a[11][3], st: a[11][4] };
+    e.hp = a[4]; e.mhp = a[5]; e.name = a[6]; e.held = a[7]; e.lv = a[8]; e.fl = a[9]; e.dash = a[10]; e.look = { s: a[11][0], h: a[11][1], c: a[11][2], p: a[11][3], st: a[11][4] }; e.equip = a[12]; e.mount = a[13]; e.pal = a[14];
     pushSample(e, a[1], a[2], a[3]);
   }
   markGone(S.players, sp);
@@ -122,6 +122,8 @@ function snapshot(m) {
       case 'parry': FX.sparks(e.x, e.y, e.c || '#fff', 9); S.fx.push({ k: 'clang', x: e.x, y: e.y, t: 0 }); break;
       case 'land': FX.dust(e.x, e.y + 10, 2.4); FX.dust(e.x + 10, e.y + 6, 2); FX.shake.m = Math.max(FX.shake.m, 2); break;
       case 'tele': S.tele.push({ ...e, t: 0 }); break;
+      case 'blink': FX.dust(e.x, e.y, 2.4); FX.sparks(e.x, e.y, e.c || '#b06aff', 10); FX.sparks(e.x2, e.y2, e.c || '#b06aff', 10); break;
+      case 'pm': { S.resHit.set(e.id, { t: 0, hp: e.hp, max: e.max }); const r = S.res[e.id]; if (r) { const d = S.content.nodes[r.type]; FX.chips(e.x, e.y, d.c2 || d.c, 6); } S.palWork = { id: e.pid, x: e.x, y: e.y, t: 0 }; break; }
       case 'imp': FX.impact(e.k, e.x, e.y, e.c); break;
       case 'sadd': setStruct(e.s); FX.dust(e.x, e.y, 2); FX.dust(e.x + 8, e.y + 4, 2); break;
       case 'sdel': { const s = S.structs.get(e.id); S.structs.delete(e.id); const d = s && S.content.structures[s.type]; FX.chips(e.x, e.y, d ? d.c : '#aaa', 12); FX.dust(e.x, e.y, 2); break; }

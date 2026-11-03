@@ -100,3 +100,21 @@ Profiles (inventory, level, xp) and private islands (buildings, chests, guest li
   Art: `tools/src/verdant_edge.png` is the source sprite; `python3 tools/make_sprites.py` builds hue variants + the held (rotated) versions.
 - **Projectile behaviours:** `beh: 'homing' | 'boomerang' | 'wave'` in any projectile definition. Kinds are drawn individually (arrow, wave, fire, ice, poison, soul, void ...) with their own impact effects.
 - **Ranged mobs** draw their bow first (warning line), then fire real arrows / poison / fire. Swords cut enemy projectiles out of the air; arrows and magic shoot them down.
+
+## v0.6 — bigger, harder, fixed world
+- **Fixed map** (same for everyone, every restart): town meadow in the centre, 8 biome sectors around it, each with an inner (danger 2-3) and an outer (danger 4-6) biome:
+  E desert → badlands · SE ashen foothills → volcano · S swamp → blightfen · SW haunted moors → cursed lands · W frostlands → glacier · NW highlands → crystal peaks · N elderwood → darkwood · NE jungle → deep jungle.
+  Layout lives in `shared/worldgen.js`; resources/mobs per biome in `server/content/biomes.js`. 110 lakes (shallow = wade, deep = swim + drown) and waterfalls.
+- **Monsters**: 35 new mobs; normal mobs use ability kits instead of telegraphs (`abilities` in `mobs.js`: shoot / burst / summon / blink / dash / leap). Outer zones scale hard.
+- **Ores**: cobalt, crystal, bloodstone, starmetal, hellstone; high tiers are rare, far out and take many hits.
+- **Bosses**: +35% HP, only heavy attacks are telegraphed, phase 2/3 enrage with extra attack patterns; boss weapons +35% damage; every boss drops a **golden trophy** (place it on your island) and armor pieces.
+- **Armor**: 41 sets (every material + every boss), 3 slots, set bonuses, drawn on your character. Equip: double-click / right-click an armor item in the inventory.
+- **Mounts** (flying ones ignore trees & water) and **Pals** (auto-mine ore into your inventory; found while mining ore or as very rare drops).
+- **Music**: procedural, 17 moods (`public/js/music.js`). Volume / mute under the minimap.
+- **Guide NPC**: pick any item you carry → where to get it, what you can craft with it and where. Town NPCs also live on your island.
+- Hidden Excalibur: 0.01% of boulders contain one (`EXCALIBUR_CHANCE` in `config.js`), drops once, never respawns.
+- Item stacks go up to 9999 · right-click opens chests / NPCs · the craft list shows everything you can afford (no more cap).
+
+### Hosting tips
+- Render free tier has a very weak CPU: set env `TICK_RATE=20` if big fights lag. Set `DATABASE_URL` so islands/characters survive restarts.
+- Coming next (not in this version): Dracula's castle dimension, Atlantis, holiday events (pumpkin moon, evil Santa), the shared town with player markets/auctions.

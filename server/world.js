@@ -50,7 +50,9 @@ class World {
       for (const [k, w] of opts) { roll -= w; if (roll <= 0) { type = k; break; } }
       const def = content.nodes[type], m = def.radius + 10;
       const x = gx * CELLG + m + rng() * (CELLG - 2 * m), y = gy * CELLG + m + rng() * (CELLG - 2 * m);
-      const r = { id: this.res.length, type, x: Math.round(x), y: Math.round(y), r: def.radius, hp: def.hp, maxHp: def.hp, alive: true, respawnAt: 0, solid: def.solid !== false };
+      if (this.gen.waterAt(x, y) || this.gen.waterAt(x + m, y) || this.gen.waterAt(x - m, y) || this.gen.waterAt(x, y + m) || this.gen.waterAt(x, y - m)) continue;   // nothing grows in lakes
+      const hidden = type === 'rock' && rng() < C.EXCALIBUR_CHANCE ? 'excalibur_ish' : null;   // 0.01%: a boulder with a sword inside
+      const r = { id: this.res.length, type, x: Math.round(x), y: Math.round(y), r: def.radius, hp: def.hp, maxHp: def.hp, alive: true, respawnAt: 0, solid: def.solid !== false, hidden };
       this.res.push(r); this.addToCells(r);
     }
   }

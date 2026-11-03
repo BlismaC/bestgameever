@@ -96,3 +96,11 @@ kbd{font:700 10px/1 monospace;background:#0006;border:1px solid #fff4;border-rad
 #dead{position:absolute;inset:0;background:#300c;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}#dead h1{font-size:64px;letter-spacing:8px;color:#ff5a5a;text-shadow:0 4px 0 #000}
 #help{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);font-size:11px;opacity:.4;white-space:nowrap}
 @media(max-width:900px){#side,#help{display:none}.slot{width:42px;height:42px}#invgrid{grid-template-columns:repeat(6,42px)}.invwrap{flex-direction:column}}
+
+.breath{height:14px}.breath>div{background:linear-gradient(#9be7ff,#3a8aff)}.breath span{line-height:10px;font-size:10px}
+#armor{display:flex;gap:5px;justify-content:center}.armor .slot{width:44px;height:44px}.aslot{width:44px;height:44px;border:2px dashed #5a74c8;border-radius:5px;font-size:10px;display:flex;align-items:center;justify-content:center;opacity:.55;text-align:center}
+#armorinfo{font-size:11px;line-height:1.35;text-align:center;max-width:180px;opacity:.95}#armorinfo b{color:var(--gold)}
+#coinhud img,.invfoot img{width:18px;height:18px;image-rendering:pixelated;vertical-align:-4px}
+.gsel{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.gout .rec{margin-top:5px}.gsrc{font-size:12px;margin:6px 0;opacity:.9}.gsrc div::before{content:"• "}
+.cost img{width:18px;height:18px;image-rendering:pixelated;vertical-align:-4px;margin-right:1px}
+#musicctl{display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:6px;pointer-events:auto}#vol{width:70px;pointer-events:auto;accent-color:#ffd23f}

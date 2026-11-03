@@ -11,6 +11,7 @@ export function start() {
   $('menu').classList.add('hidden'); $('hud').classList.remove('hidden');
   document.title = S.gameName;
   buildWorldMap(); buildChips(); buildLegend(); roomChanged(); invChanged();
+  const ci = A.iconURL('coin'); if (ci) { $('coinimg').src = ci; $('coinimg2').src = ci; }
   $('homebtn').onclick = () => send({ t: 'home' }); $('islandbtn').onclick = () => toggle('home');
   $('trash').onclick = () => { if (pick >= 0) { send({ t: 'trash', i: pick }); pick = -1; renderInv(); } };
 }
@@ -47,6 +48,12 @@ export function tipHTML(id, mod, extra) {
     for (const [k, v] of w.fx || []) L.push(`<div class="up">${k === 'burn' ? `Sets enemies on fire (${v}/s)` : k === 'poison' ? `Poisons enemies (${v}/s)` : k === 'slow' ? 'Slows enemies' : `Steals ${Math.round(v * 100)}% of damage as life`}</div>`);
     if (m) L.push(`<div class="d">Modifier: ${m.n} (${sgn(m.d || 0)}% dmg, ${sgn(m.c || 0)}% crit, ${sgn(m.k || 0)}% knockback)</div>`);
   }
+  if (it.ar) {
+    const set = S.content.sets[it.ar.set], have = [S.equip[0], S.equip[1], S.equip[2]].filter((id) => id && S.content.items[id] && S.content.items[id].ar && S.content.items[id].ar.set === it.ar.set).length;
+    L.push(`<div class="st"><b>${it.ar.def}</b> defense · ${it.ar.slot}</div><div class="gold">Set: ${set.n} (${have}/3 worn)</div><div class="${have === 3 ? 'up' : 'd'}">Set bonus — ${set.b.name}: ${set.b.desc}</div><div class="d">Double-click or right-click to wear.</div>`);
+  }
+  if (it.mt) { const m = S.content.mounts[it.mt]; L.push(`<div class="up">${m.f ? 'Flying mount: soars over trees, rocks and lakes (no drowning)' : 'Ground mount'} · ×${m.s} speed</div><div class="d">Use: F or right-click to mount / dismount.</div>`); }
+  if (it.pa) L.push(`<div class="up">Pal: follows you and auto-mines ore &amp; rock</div><div class="d">Use to call / dismiss. Tier ${S.content.pals[it.pa].t} ore.</div>`);
   if (it.hl) L.push(`<div class="up">Restores ${it.hl} life</div><div class="d">Potion sickness: ${Math.round(Math.max(2, Math.min(40, it.hl * 0.32)))}s before the next healing item</div>`);
   if (it.bf) for (const b of it.bf) L.push(`<div class="up">Grants ${S.content.buffs[b.id].n} (${b.dur}s)</div><div class="d">${S.content.buffs[b.id].d}</div>`);
   if (it.d) L.push(`<div class="d">${it.d}</div>`);
@@ -95,11 +102,23 @@ function renderInv() {
     const s = S.inv[i]; const el = icon(s ? s[0] : null, s ? s[1] : 0, i, false, s ? s[2] : null);
     if (i === pick) el.classList.add('pick'); attachTip(el);
     el.onclick = () => { if (pick < 0) { if (s) pick = i; } else { if (pick !== i) send({ t: 'swap', a: pick, b: i }); pick = -1; } renderInv(); };
-    el.oncontextmenu = (e) => { e.preventDefault(); send({ t: 'drop', i }); };
+    const isArmor = s && S.content.items[s[0]].ar;
+    el.ondblclick = () => { if (isArmor) send({ t: 'equip', i }); };
+    el.oncontextmenu = (e) => { e.preventDefault(); if (isArmor && !e.shiftKey) send({ t: 'equip', i }); else send({ t: 'drop', i }); };
     g.appendChild(el);
   }
+  renderArmor();
   const c = $('invprev'), g2 = c.getContext('2d'); g2.clearRect(0, 0, c.width, c.height); g2.imageSmoothingEnabled = false;
-  drawHuman(g2, { x: 60, y: 136, look: S.look, dir: 1, aim: 0.5, u: 4.2, phase: 0, move: 0 });
+  drawHuman(g2, { x: 60, y: 136, look: S.look, dir: 1, aim: 0.5, u: 4.2, phase: 0, move: 0, armor: armorLooks(S.equip) });
+}
+function armorLooks(eq) {
+  const it = (id) => (id ? S.content.items[id] : null), L = (x) => (x && x.ar ? x.ar.look : null), h = L(it(eq[0])), c = L(it(eq[1])), l = L(it(eq[2]));
+  return { h: h ? { pri: h.pri, sec: h.sec, trim: h.trim, helm: h.helm, glow: h.glow } : null, c: c ? { pri: c.pri, sec: c.sec, trim: c.trim, chest: c.chest, cape: c.cape, wings: c.wings, glow: c.glow } : null, l: l ? { pri: l.pri, sec: l.sec, trim: l.trim } : null };
+}
+function renderArmor() {
+  const box = $('armor'); if (!box) return; box.innerHTML = '';
+  ['helmet', 'chest', 'legs'].forEach((slot, i) => { const id = S.equip[i]; let el; if (id) { el = icon(id, 1, undefined, false, null); attachTip(el); el.onclick = () => send({ t: 'unequip', slot }); } else { el = document.createElement('div'); el.className = 'aslot'; el.textContent = slot === 'helmet' ? 'Helmet' : slot === 'chest' ? 'Chest' : 'Legs'; } box.appendChild(el); });
+  const ar = S.ar; $('armorinfo').innerHTML = ar ? `<b>Defense ${ar.def}</b>${ar.set ? `<br>Set: ${ar.set} ✔` : ''}${ar.dmg ? `<br>+${ar.dmg}% damage` : ''}${ar.crit ? ` · +${ar.crit}% crit` : ''}${ar.speed ? `<br>+${Math.round(ar.speed * 100)}% speed` : ''}${ar.regen ? ` · +${ar.regen} regen` : ''}${ar.lifesteal ? `<br>${Math.round(ar.lifesteal * 100)}% lifesteal` : ''}${ar.fireRes ? '<br>Fire immune' : ''}` : '';
 }
 
 // ------------------------------------------------------------------ crafting: only what you can make right now
@@ -126,10 +145,10 @@ function renderCraft() {
     if (craftFilter !== 'all' && cat !== craftFilter) continue;
     rows.push({ r, it, stOk: !r.s || near.has(r.s) });
   }
-  rows.sort((a, b) => (b.stOk - a.stOk) || ((a.it.t || 0) - (b.it.t || 0)));
-  for (const { r, it, stOk } of rows.slice(0, 60)) {
+  rows.sort((a, b) => (b.stOk - a.stOk) || ((b.it.t || 0) - (a.it.t || 0)) || a.it.n.localeCompare(b.it.n));
+  for (const { r, it, stOk } of rows.slice(0, 400)) {
     const d = document.createElement('div'); d.className = 'rec';
-    const cost = Object.entries(r.c).map(([k, n]) => { const ci = S.content.items[k]; return `<span title="${ci.n}">${ci.e}${n}</span>`; }).join('');
+    const cost = Object.entries(r.c).map(([k, n]) => { const ci = S.content.items[k], u = A.iconURL(k); return `<span title="${ci.n}">${u ? `<img src="${u}">` : ci.e}${n}</span>`; }).join('');
     const iu = A.iconURL(r.o);
     d.innerHTML = `<div class="ic" data-id="${r.o}">${iu ? `<img src="${iu}">` : it.e}</div><div class="nm"><b style="color:${nameColor(it)}">${it.n}${r.n > 1 ? ' x' + r.n : ''}</b><div class="cost">${cost}</div>${r.s ? `<div class="need ${stOk ? 'ok' : ''}">${stOk ? '✔' : '✖'} ${stationName(r.s)}</div>` : ''}</div>`;
     attachTip(d.querySelector('.ic'), () => `<div class="d">Crafted items roll a random modifier.</div>`);
@@ -216,7 +235,7 @@ function renderNpc() {
     h += `<div style="display:flex;gap:6px;margin-bottom:8px"><button class="btn small ${npcTab === 'buy' ? 'good' : ''}" data-tab="buy">Buy</button><button class="btn small ${npcTab === 'sell' ? 'good' : ''}" data-tab="sell">Sell</button></div><div id="npclist"></div>`;
   } else if (m.kind === 'reforge') h += `<div class="note">Pick a weapon. Reforging rerolls its modifier (cost depends on its value).</div><div id="npclist"></div>`;
   else if (m.kind === 'nurse') h += `<button class="btn good" id="nurse">Heal me — ${m.cost} coins</button>`;
-  else if (m.kind === 'guide') h += `<button class="btn" id="tip2">Another tip</button>`;
+  else if (m.kind === 'guide') h += `<button class="btn" id="tip2">Another tip</button><div class="sec" id="gh"></div>`;
   el.innerHTML = h;
   el.querySelectorAll('[data-tab]').forEach((b) => { b.onclick = () => { npcTab = b.dataset.tab; renderNpc(); }; });
   const list = el.querySelector('#npclist');
@@ -235,8 +254,34 @@ function renderNpc() {
     b.onclick = () => send({ t: m.kind === 'reforge' ? 'reforge' : 'sell', i }); row.appendChild(b); list.appendChild(row);
   });
   if (list && !list.children.length) list.innerHTML = '<div class="note">Nothing here.</div>';
+  if (m.kind === 'guide') renderGuideHelper(el.querySelector('#gh'));
   if (el.querySelector('#nurse')) el.querySelector('#nurse').onclick = () => send({ t: 'nurse' });
   if (el.querySelector('#tip2')) el.querySelector('#tip2').onclick = () => send({ t: 'npc', id: m.id });
+}
+
+// ---- the Guide: pick an item you carry -> where it comes from, what you can craft with it, and WHERE to craft it
+let guideItem = null;
+function renderGuideHelper(box) {
+  if (!box) return;
+  box.innerHTML = '<b>What is this item for?</b><div class="note">Pick something from your inventory and I will tell you how to get more of it and what you can make.</div><div class="gsel" id="gsel"></div><div class="gout" id="gout"></div>';
+  const ids = [...new Set(S.inv.filter((x) => x && x[0] !== 'coin').map((x) => x[0]))];
+  for (const id of ids) { const e = icon(id, 0); e.style.width = e.style.height = '42px'; attachTip(e); if (id === guideItem) e.classList.add('sel'); e.onclick = () => { guideItem = id; renderGuideHelper(box); }; box.querySelector('#gsel').appendChild(e); }
+  if (!guideItem) return;
+  const it = S.content.items[guideItem], out = box.querySelector('#gout');
+  let h = `<h3 style="margin-top:6px;color:${nameColor(it)}">${it.n}</h3>`;
+  const src = S.content.src[guideItem] || []; h += `<div class="gsrc"><b>How to get it</b>${src.length ? src.map((x) => `<div>${esc(x)}</div>`).join('') : '<div>Rare find — look around!</div>'}</div>`;
+  out.innerHTML = h;
+  const uses = S.content.recipes.filter((r) => r.c[guideItem]);
+  if (!uses.length) { out.insertAdjacentHTML('beforeend', '<div class="note">Nothing can be crafted with it directly.</div>'); return; }
+  out.insertAdjacentHTML('beforeend', `<b>You can craft with it (${uses.length})</b>`);
+  for (const r of uses.slice(0, 14)) {
+    const o = S.content.items[r.o], can = Object.entries(r.c).every(([k, n]) => have(k) >= n), row = document.createElement('div'); row.className = 'rec';
+    const cost = Object.entries(r.c).map(([k, n]) => { const ci = S.content.items[k], u = A.iconURL(k); return `<span title="${ci.n}">${u ? `<img src="${u}">` : ci.e}${have(k)}/${n}</span>`; }).join('');
+    const where = r.s ? `Craft at the <b>${stationName(r.s)}</b> — stations are built on your island (press H)` : 'Craft by hand — open the crafting menu (C)';
+    const iu = A.iconURL(r.o);
+    row.innerHTML = `<div class="ic">${iu ? `<img src="${iu}">` : o.e}</div><div class="nm"><b style="color:${nameColor(o)}">${o.n}</b><div class="cost">${cost}</div><div class="need ${can ? 'ok' : ''}">${can ? '✔ you have everything' : '✖ missing materials'} · ${where}</div></div>`;
+    out.appendChild(row);
+  }
 }
 
 // ------------------------------------------------------------------ chat
@@ -261,7 +306,8 @@ export function tick() {
   $('info').textContent = `${S.ping}ms · ${S.players.size + 1} near`;
   const now = performance.now();
   // buffs
-  const key = S.buffs.map((b) => b[0]).join(',');
+  const bb2 = $('breathbar'); if (S.breath < 9.8) { bb2.classList.remove('hidden'); $('breathfill').style.width = (S.breath / 10 * 100) + '%'; } else bb2.classList.add('hidden');
+  const key = S.buffs.map((b) => b[0]).join(',') + '|' + S.mount + '|' + S.pal;
   if (key !== lastBuffKey) {
     lastBuffKey = key; const c = $('buffs'); c.innerHTML = ''; buffEls = new Map();
     for (const [id] of S.buffs) {
@@ -271,6 +317,7 @@ export function tick() {
       el.addEventListener('mousemove', (e) => { const t = $('tip'); t.style.left = e.clientX + 12 + 'px'; t.style.top = e.clientY - 70 + 'px'; });
       el.addEventListener('mouseleave', () => $('tip').classList.add('hidden')); c.appendChild(el); buffEls.set(id, el);
     }
+    for (const [kind, id] of [['mount', S.mount], ['pal', S.pal]]) if (id) { const el = document.createElement('div'); el.className = 'buff'; const iu = A.iconURL((kind === 'mount' ? 'mount_' : 'pal_') + id), nm = (kind === 'mount' ? S.content.mounts : S.content.pals)[id].n; el.innerHTML = `<img src="${iu}"><span></span>`; el.addEventListener('mouseenter', () => { const t = $('tip'); t.innerHTML = `<div class="t" style="color:#7dff8a">${nm}</div><div class="d">${kind === 'mount' ? 'Mounted — use the item again to dismount' : 'Your Pal is auto-mining nearby ore'}</div>`; t.classList.remove('hidden'); }); el.addEventListener('mousemove', (e) => { const t = $('tip'); t.style.left = e.clientX + 12 + 'px'; t.style.top = e.clientY - 70 + 'px'; }); el.addEventListener('mouseleave', () => $('tip').classList.add('hidden')); c.appendChild(el); }
   }
   for (const [id, left] of S.buffs) { const el = buffEls.get(id); if (el) el.lastChild.textContent = left >= 60 ? Math.ceil(left / 60) + 'm' : left + 's'; }
   // potion sickness overlay on healing items

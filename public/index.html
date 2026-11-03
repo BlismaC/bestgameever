@@ -15,9 +15,10 @@
   <div id="banner" class="hidden"></div>
   <div id="stats">
     <div id="buffs"></div>
+    <div id="breathbar" class="bar breath hidden"><div id="breathfill"></div><span>Breath</span></div>
     <div class="bar hp"><div id="hpfill"></div><span id="hptext"></span></div>
     <div class="bar xp"><div id="xpfill"></div><span id="lvtext"></span></div>
-    <div id="homerow"><button id="homebtn" class="btn small">🏠 Home <kbd>H</kbd></button><button id="islandbtn" class="btn small">Island <kbd>J</kbd></button><span id="coinhud">🪙 <b id="coinn">0</b></span></div>
+    <div id="homerow"><button id="homebtn" class="btn small">🏠 Home <kbd>H</kbd></button><button id="islandbtn" class="btn small">Island <kbd>J</kbd></button><span id="coinhud"><img id="coinimg" alt=""> <b id="coinn">0</b></span></div>
   </div>
   <div id="hotbar"></div>
   <div id="side">
@@ -26,14 +27,15 @@
     <div id="biome"></div>
     <div id="lb"></div>
     <div id="info"></div>
+    <div id="musicctl"><button id="mutebtn" class="btn small">♪ On</button><input type="range" id="vol" min="0" max="100"></div>
   </div>
   <div id="chat"><div id="chatlog"></div><input id="chatinput" maxlength="140" placeholder="Press Enter to chat — /help" autocomplete="off"></div>
   <div id="tpbar" class="hidden"><div id="tpfill"></div><span>Teleporting...</span></div>
   <div id="toasts"></div>
 
   <div id="inv" class="panel hidden"><h3>Inventory <small>click a slot, then another to swap · right-click drops</small></h3>
-    <div class="invwrap"><div class="invleft"><canvas id="invprev" width="120" height="150"></canvas><div class="armor"><div class="aslot">⛑<small>Helmet</small></div><div class="aslot">🛡<small>Chest</small></div><div class="aslot">👖<small>Legs</small></div></div></div>
-      <div><div id="invgrid"></div><div class="invfoot"><span>🪙 <b id="invcoins">0</b></span><div id="trash" class="slot trash" title="Trash: click an item, then click here to delete it">🗑</div></div></div></div>
+    <div class="invwrap"><div class="invleft"><canvas id="invprev" width="120" height="150"></canvas><div class="armor" id="armor"></div><div id="armorinfo"></div></div>
+      <div><div id="invgrid"></div><div class="invfoot"><span><img id="coinimg2" alt=""> <b id="invcoins">0</b></span><div id="trash" class="slot trash" title="Trash: click an item, then click here to delete it">🗑</div></div></div></div>
   </div>
   <div id="craft" class="panel hidden"><h3>Crafting <small>(C) — items you can make right now</small></h3><div id="craftnear"></div><input id="craftsearch" placeholder="Search..." autocomplete="off"><div id="craftchips"></div><div id="craftlist"></div></div>
   <div id="map" class="panel hidden"><h3>World map <small>(M)</small></h3><canvas id="worldmap" width="520" height="520"></canvas><div id="maplegend"></div></div>
