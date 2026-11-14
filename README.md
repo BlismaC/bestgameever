@@ -100,3 +100,52 @@ Profiles (inventory, level, xp) and private islands (buildings, chests, guest li
   Art: `tools/src/verdant_edge.png` is the source sprite; `python3 tools/make_sprites.py` builds hue variants + the held (rotated) versions.
 - **Projectile behaviours:** `beh: 'homing' | 'boomerang' | 'wave'` in any projectile definition. Kinds are drawn individually (arrow, wave, fire, ice, poison, soul, void ...) with their own impact effects.
 - **Ranged mobs** draw their bow first (warning line), then fire real arrows / poison / fire. Swords cut enemy projectiles out of the air; arrows and magic shoot them down.
+
+## v0.6 — bigger, harder, fixed world
+- **Fixed map** (same for everyone, every restart): town meadow in the centre, 8 biome sectors around it, each with an inner (danger 2-3) and an outer (danger 4-6) biome:
+  E desert → badlands · SE ashen foothills → volcano · S swamp → blightfen · SW haunted moors → cursed lands · W frostlands → glacier · NW highlands → crystal peaks · N elderwood → darkwood · NE jungle → deep jungle.
+  Layout lives in `shared/worldgen.js`; resources/mobs per biome in `server/content/biomes.js`. 110 lakes (shallow = wade, deep = swim + drown) and waterfalls.
+- **Monsters**: 35 new mobs; normal mobs use ability kits instead of telegraphs (`abilities` in `mobs.js`: shoot / burst / summon / blink / dash / leap). Outer zones scale hard.
+- **Ores**: cobalt, crystal, bloodstone, starmetal, hellstone; high tiers are rare, far out and take many hits.
+- **Bosses**: +35% HP, only heavy attacks are telegraphed, phase 2/3 enrage with extra attack patterns; boss weapons +35% damage; every boss drops a **golden trophy** (place it on your island) and armor pieces.
+- **Armor**: 41 sets (every material + every boss), 3 slots, set bonuses, drawn on your character. Equip: double-click / right-click an armor item in the inventory.
+- **Mounts** (flying ones ignore trees & water) and **Pals** (auto-mine ore into your inventory; found while mining ore or as very rare drops).
+- **Music**: procedural, 17 moods (`public/js/music.js`). Volume / mute under the minimap.
+- **Guide NPC**: pick any item you carry → where to get it, what you can craft with it and where. Town NPCs also live on your island.
+- Hidden Excalibur: 0.01% of boulders contain one (`EXCALIBUR_CHANCE` in `config.js`), drops once, never respawns.
+- Item stacks go up to 9999 · right-click opens chests / NPCs · the craft list shows everything you can afford (no more cap).
+
+### Hosting tips
+- Render free tier has a very weak CPU: set env `TICK_RATE=20` if big fights lag. Set `DATABASE_URL` so islands/characters survive restarts.
+- Coming next (not in this version): Dracula's castle dimension, Atlantis, holiday events (pumpkin moon, evil Santa), the shared town with player markets/auctions.
+
+## v0.7 — tameable Pals, dimensions, holidays, market
+- **Pals are creatures now.** 14 wild species roam the biomes ("Wild Cinderfox Lv14", shiny ✦ ones too). Weaken one, then throw a **Pal Sphere** (hold it, click):
+  catch chance depends on the sphere (35 / 55 / 80 %), the Pal's remaining HP, its rarity and level. Craft spheres at the Workbench (slime gel + iron) or buy them from the Merchant.
+  Tamed Pals live in your roster (**P**): level up, have 1-2 traits (Brave, Hard Worker, Lucky, Vampiric, Tough...), can be renamed / released. The Pal that is out **fights next to you and auto-mines ore & rock**.
+- **Willow Town** (peaceful dimension, portal in the main town): Market Board (player shop), Auctioneer (auctions with bids/buyout), Postie (mail — you are paid even when offline), every NPC again, no PvP/monsters/building.
+- **Dracula's domain**: rare "desperate plea" event at night (a villager with a "!" nearby). Accept → foggy gothic land with gothic monsters → castle gate → **Vlad Dracula** (speech, 3 phases, bat swarms, blood rain, teleport-slashes, gothic piano music).
+  Drops: Dracula's Cape armor set (with bat wings), 4 legendary weapons, trophy, **25 % Vampire Elixir** (lifesteal, speed, bat form on **V**, but sunlight burns — Holy Water cures).
+- **Atlantis**: when you drown there is a 1-in-3 chance to be pulled into the sunken city. Walk up to the temple → **Neptune** (speech, tidal waves, whirlpool, lightning rain, sharks). Drops: Neptune's Pearl (permanent gills), trident & staves, Atlantean set, Sea Turtle mount.
+- **Holidays** (real date; `/season halloween|christmas|newyear|valentine|easter|off|auto`): Pumpkin Moon + **Pumpking** (Halloween), Frost Moon + **Sinister Claus** (Christmas), seasonal town decorations & weather, daily gifts from seasonal NPCs, **trick-or-treat candy** from every town NPC at night during Halloween.
+- Admin/test commands: `/dim town|castle|hall|atlantis`, `/plea`, `/pal <species> [level]`, `/vampire`, `/season ...`, `/event pumpkin_moon|frost_moon`.
+- `npm test` runs the old tests plus `server/test_systems.js` (market, auction, dimensions, bosses, pals, vampire, seasons).
+
+## v0.7.1 — netcode feel, pixel projectiles, custom attacks, hand-pixeled bosses & pals
+- **Lag compensation**: projectiles and monsters are drawn *extrapolated by your round-trip* (`public/js/interp.js`), so what you see is where the server tests hits when your input arrives; your own ranged shots appear instantly (local cosmetic prediction, replaced by the real projectile); monsters show a short cast-squash + muzzle flash when they fire.
+- **Projectiles/effects are pixel art** (`tools/sprites_proj.py` → `assets/proj`, `assets/fx`): 42 projectile kinds with 3 animation frames, 12 impact-burst styles, muzzle flashes, pixel trails. Many monsters have their own kind (stinger, crow, wisp, seed, cookie, snowball, feather, leaf, sand, shard, rock, spark, present, candy, bloodorb...).
+- **New attack types**: `lob` (arcing bomb with a landing shadow) and lingering **ground zones** (poison / fire / ice / blood / water / lava) — `server/systems/attacks.js`, assigned to pumpkin heads, slimes, witches, demons, snowmen and several bosses.
+- **Hand-pixeled art** (`tools/pixel_hand.py`: no anti-aliasing, fixed palettes, outlines, edge shading): Dracula, Neptune, Pumpking, Sinister Claus, 5 dialogue portraits, all 14 Pals. Cutscenes show a pixel portrait next to a speech bubble.
+- **Wild Pals** spawn reliably (dedicated spawner, 3 per player nearby), have name tags, and a radar arrow shows Pals that are off screen.
+
+## v0.7.2 — more hand-pixeled art
+- Hand-pixeled (see `tools/pixel_hand.py`): slimes (7 colours), wolves (4), goblin, skeleton archer, zombies (4), spider, cow, chicken, bats (2), Dracula's castle and the Atlantis temple.
+- Still generated by the older vector→pixel pipeline: most other monsters, items, weapons, trees/ores and the remaining decor. Replace them gradually by adding functions to `MOB_ART` / `DECOR_ART` — `tools/make_sprites.py` picks them up automatically.
+
+## v0.7.3 — gameplay fixes
+- **Pal Spheres work** (they were discarded the tick they were thrown: zero-damage projectiles were dropped). Wild pals are now rare (about one per few minutes of exploring), spawn outside your screen and there is no radar.
+- **Crafting**: one click always crafts (the list is no longer rebuilt under the mouse), and a clear "Crafted X" / "Missing materials" message appears in the panel.
+- **Hits**: enemy projectiles need a clear overlap (smaller hurt-box, swept test), melee contact is tighter, your projectiles no longer cancel against enemy projectiles (that made spammed shots vanish), your shots start where your character is while moving, fast shots cannot tunnel through monsters.
+- **Knockback** for the player, **bosses are solid**, houses / castle / temple / pillars / thrones are solid, you respawn in the normal map.
+- **Doors**: walking into Dracula's gate or Neptune's temple door plays an enter animation (walk in, shrink, fade) and teleports you; Neptune now has his own interior hall (`temple_hall`). Pixel-art portals, boss-hall furniture (pillars, torches that light the room, carpet, throne).
+- Projectiles are drawn by integrating their velocity with a gentle correction toward the server (smoother), own shots hand over to the server projectile without a jump.

@@ -2,7 +2,7 @@
 module.exports = [
   { id: 'merchant', name: 'Marlo the Merchant', kind: 'shop', ang: 0.2, look: { s: 1, h: 3, c: 4, p: 2, st: 1 }, hat: 'cap',
     text: "Fine wares, fair prices. I buy your junk too!",
-    shop: [['wood', 6], ['stone', 6], ['apple', 12], ['cooked_meat', 40], ['potion_heal', 120], ['potion_regen', 160], ['potion_swift', 160], ['potion_ironskin', 160], ['potion_greater_heal', 420], ['leather', 18], ['slime_gel', 12]] },
+    shop: [['wood', 6], ['stone', 6], ['apple', 12], ['cooked_meat', 40], ['potion_heal', 120], ['pal_sphere', 150], ['potion_regen', 160], ['potion_swift', 160], ['potion_ironskin', 160], ['potion_greater_heal', 420], ['leather', 18], ['slime_gel', 12]] },
   { id: 'smith', name: 'Brun the Reforger', kind: 'reforge', ang: 1.8, look: { s: 0, h: 1, c: 0, p: 5, st: 2 }, hat: 'bandana',
     text: "Give me a weapon and some coins and I'll hammer a new edge on it. No promises it'll be better!" },
   { id: 'nurse', name: 'Nora the Nurse', kind: 'nurse', ang: 3.3, look: { s: 2, h: 5, c: 6, p: 3, st: 0 }, hat: 'nurse',
@@ -19,4 +19,13 @@ module.exports = [
       "Swing your weapon at enemy projectiles to knock them out of the air.",
       "Danger rises the farther you travel from the center. Rare ores wait out there!",
       "You can invite friends to your island from the Home panel and decide who may open your chests."] },
+  // ---- Town-dimension only ----
+  { id: 'auctioneer', name: 'Aldo the Auctioneer', kind: 'auction', dimOnly: true, tpos: [6200, 27820], look: { s: 1, h: 6, c: 5, p: 4, st: 1 }, hat: 'cap', text: 'Going once, going twice... Sell your treasures to the highest bidder!' },
+  { id: 'mailman', name: 'Penny the Postie', kind: 'mail', dimOnly: true, tpos: [5600, 28650], look: { s: 2, h: 4, c: 3, p: 3, st: 0 }, hat: 'bandana', text: 'Letters, parcels, winnings. Anything waiting for you comes through me!' },
+  { id: 'market_board', name: 'Market Board', kind: 'market', dimOnly: true, noBody: true, tpos: [5000, 27820], look: { s: 0, h: 0, c: 0, p: 0, st: 0 }, text: 'Player market.' },
+  { id: 'santa_npc', name: 'Saint Nick', kind: 'gift', season: 'christmas', dimOnly: true, tpos: [5350, 27350], look: { s: 0, h: 7, c: 6, p: 6, st: 3 }, hat: 'santa', text: 'Ho ho ho! A little something for the good folk. Come back tomorrow!', gifts: [['gift_box', 1, 1], ['candy_cane', 2, 4], ['gingerbread', 1, 2]] },
+  { id: 'pumpkin_npc', name: 'Jack the Pumpkin Kid', kind: 'gift', season: 'halloween', dimOnly: true, tpos: [5850, 27350], look: { s: 3, h: 3, c: 1, p: 1, st: 2 }, hat: 'pumpkin', text: 'Trick or treat! Come back every night for candy.', gifts: [['candy_corn', 2, 5], ['chocolate_bar', 0, 2], ['caramel_apple', 0, 1]], night: true },
+  { id: 'cupid_npc', name: 'Cupid', kind: 'gift', season: 'valentine', dimOnly: true, tpos: [5350, 28050], look: { s: 2, h: 8, c: 7, p: 3, st: 1 }, hat: null, text: 'Love is in the air! Here is a little sweetness.', gifts: [['chocolate_heart', 1, 2], ['chocolate_bar', 1, 2]] },
+  { id: 'bunny_npc', name: 'Benny the Bunny', kind: 'gift', season: 'easter', dimOnly: true, tpos: [5850, 28050], look: { s: 1, h: 5, c: 8, p: 5, st: 1 }, hat: 'bunny', text: 'Spring is here! Painted eggs, fresh every day.', gifts: [['easter_egg', 2, 4], ['chocolate_bar', 0, 1]] },
+  { id: 'party_npc', name: 'Penny the Party Planner', kind: 'gift', season: 'newyear', dimOnly: true, tpos: [5600, 27250], look: { s: 3, h: 6, c: 6, p: 2, st: 3 }, hat: 'cap', text: 'Happy New Year! Fireworks at the fountain tonight!', gifts: [['gift_box', 1, 1], ['chocolate_bar', 1, 3]] },
 ];

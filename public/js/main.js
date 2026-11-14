@@ -9,12 +9,14 @@ import * as FX from './fx.js';
 import * as ui from './ui.js';
 import * as A from './assets.js';
 import { initMenu, look, stopMenu } from './menu.js';
+import * as Music from './music.js';
 
 const $ = (id) => document.getElementById(id);
 const nameEl = $('name');
 nameEl.value = localStorage.getItem('rf_name') || '';
 A.load().then(() => initMenu());
 function play() {
+  Music.start();
   $('play').disabled = true; $('menumsg').textContent = 'Connecting...';
   const n = nameEl.value.trim() || 'Wanderer'; localStorage.setItem('rf_name', n);
   connect(n, { ...look }, (msg) => ui.menuMsg(msg));
@@ -23,13 +25,37 @@ $('play').onclick = play;
 nameEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') play(); });
 initInput();
 
-let last = performance.now(), sendAcc = 0, dustAcc = 0;
+let last = performance.now(), sendAcc = 0, dustAcc = 0, moodAcc = 0;
+// cosmetic local prediction of our own projectiles: the bolt leaves the staff the instant you click; the server's real projectile replaces it
+function predictShot(me, a, nowMs) {
+  const sl = S.inv[S.sel], it = sl && S.content.items[sl[0]], w = it && it.w; if (!w || !w.pj || nowMs < S.nextShot) return;
+  S.nextShot = nowMs + w.cd * 1000 * 0.97;
+  const [speed, spread, r, col, life] = w.pj, n = w.np || 1;
+  S.fx.push({ k: 'muzzle', x: me.x + Math.cos(a) * 34, y: me.y + Math.sin(a) * 34, a, t: 0, d: 0.14, size: 44 });
+  for (let i = 0; i < n; i++) { const off = n > 1 ? (i / (n - 1) - 0.5) * spread : 0, an = a + off; S.ghosts.push({ x: me.x + Math.cos(an) * 30, y: me.y + Math.sin(an) * 30, vx: Math.cos(an) * speed, vy: Math.sin(an) * speed, r, color: col, kind: w.pk || 'orb', angle: an, age: 0, life, id: 900000 + i, hostile: false }); }
+}
+function pickMood() {
+  if (S.cutscene && performance.now() < S.cutscene.until && S.cutscene.mood) return ({ victory: 'town' })[S.cutscene.mood] || S.cutscene.mood;
+  if (S.room.kind === 'island') return 'island';
+  const me = S.me, dim = S.gen.dimAt(me.x, me.y);
+  let boss = null; for (const m of S.mobs.values()) { const d = S.content.mobs[m.type]; if (d && d.b && Math.hypot(m.x - me.x, m.y - me.y) < 1400) { boss = m.type; break; } }
+  if (boss) return ({ dracula: 'dracula_boss', neptune: 'neptune', pumpking: 'pumpkin', evil_santa: 'frost' })[boss] || 'boss';
+  if (dim === 'town') return S.season === 'halloween' ? 'halloween_town' : S.season === 'christmas' ? 'christmas_town' : 'town';
+  if (dim === 'castle_land') return 'castle'; if (dim === 'castle_hall') return 'dracula'; if (dim === 'atlantis' || dim === 'temple_hall') return 'atlantis';
+  if (S.evt) return S.evt[0] === 'Blood Moon' ? 'bloodmoon' : S.evt[0] === 'Slime Rain' ? 'slimerain' : S.evt[0] === 'Pumpkin Moon' ? 'pumpkin' : S.evt[0] === 'Frost Moon' ? 'frost' : 'event';
+  if (Math.hypot(me.x - S.size / 2, me.y - S.size / 2) < S.cfg.safe + 200) return 'town';
+  const night = Math.cos(2 * Math.PI * (S.dayTime - 0.25)) < -0.2, b2 = S.content.biomes[S.gen.biomeAt(me.x, me.y)];
+  return night && (b2.m === 'day' || b2.m === 'forest') ? 'night' : (b2.m || 'day');
+}
+// music controls
+{ const mb = $('mutebtn'), vol = $('vol'); if (mb) { const upd = () => { mb.textContent = Music.isEnabled() ? '♪ On' : '♪ Off'; }; upd(); mb.onclick = () => { Music.setEnabled(!Music.isEnabled()); Music.start(); upd(); }; vol.value = Math.round(Music.getVolume() * 100); vol.oninput = () => Music.setVolume(vol.value / 100); } }
 function frame(nowMs) {
   const dt = Math.min(0.05, Math.max(0.001, (nowMs - last) / 1000)); last = nowMs;
   const t = nowMs / 1000;
   if (S.joined && S.me && S.me.init) {
     stopMenu();
     const me = S.me, a = aim(); const atkNow = input.atk || input.click; input.click = false;
+    if (atkNow && !S.dead && S.room.kind !== 'island') predictShot(me, a, nowMs);
     // ---- movement: predicted with the exact server code, one input per frame, reconciled on every snapshot
     if (!S.dead) {
       frameInput(dt, mask(), input.dash, a); input.dash = false;
@@ -76,6 +102,7 @@ function frame(nowMs) {
     const lead = { x: (input.mx - innerWidth / 2) * 0.1, y: (input.my - innerHeight / 2) * 0.1 };
     render(dt, t, { x: rx, y: ry, hp: me.hp, mhp: me.mhp, flash: me.flash, dashLeft: me.dashLeft, sp: me.sp, ph: me.ph, face: me.face }, a, held, lead);
     ui.tick();
+    moodAcc += dt; if (moodAcc > 1) { moodAcc = 0; Music.setMood(pickMood()); }
   }
   requestAnimationFrame(frame);
 }

@@ -25,5 +25,7 @@
     collide(st);
     st.vx = vx; st.vy = vy;
   }
-  return { step, UP, DOWN, LEFT, RIGHT };
+  // speed multiplier from terrain: wading / swimming (flying mounts ignore water)
+  function waterMult(gen, x, y, flying) { if (flying || !gen) return 1; const w = gen.waterAt(x, y); return w === 2 ? 0.55 : w === 1 ? 0.82 : 1; }
+  return { step, waterMult, UP, DOWN, LEFT, RIGHT };
 });
