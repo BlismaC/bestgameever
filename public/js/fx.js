@@ -51,11 +51,11 @@ export function draw(ctx) {
   for (const p of P) {
     const a = Math.max(0, p.life / p.max);
     if (p.k === 'dot') {
-      ctx.globalAlpha = a; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.4 + a * 0.6), 0, TAU); ctx.fill();
+      ctx.globalAlpha = Math.min(1, a * 1.3); ctx.fillStyle = p.color; const z = Math.max(2, Math.round(p.size * (0.5 + a * 0.5) / 2) * 2); ctx.fillRect(Math.round(p.x - z / 2), Math.round(p.y - z / 2), z, z);
     } else if (p.k === 'chip') {
       ctx.globalAlpha = Math.min(1, a * 1.5); ctx.fillStyle = p.color; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2); ctx.restore();
     } else if (p.k === 'puff') {
-      ctx.globalAlpha = a * 0.35; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (1.6 - a * 0.8), 0, TAU); ctx.fill();
+      ctx.globalAlpha = a * 0.5; ctx.fillStyle = p.color; const z = Math.round(p.size * (1.2 - a * 0.5) / 3) * 3 + 3; ctx.fillRect(Math.round(p.x - z / 2), Math.round(p.y - z / 2), z, z);
     } else if (p.k === 'plus') {
       ctx.globalAlpha = Math.min(1, a * 1.4); ctx.fillStyle = p.color; const z = p.size; ctx.fillRect(p.x - z / 2, p.y - z / 6, z, z / 3); ctx.fillRect(p.x - z / 6, p.y - z / 2, z / 3, z);
     } else if (p.k === 'ring') {
@@ -64,4 +64,12 @@ export function draw(ctx) {
     }
   }
   ctx.globalAlpha = 1;
+}
+
+// pixel particles for projectile trails (square, snapped)
+const TRAIL = { fire: ['#ffd23f', '#ff8a1a', '#d8481a'], wisp: ['#ffd060', '#e8841a'], ice: ['#ffffff', '#9be7ff'], poison: ['#c8ff98', '#78d848'], void: ['#d8b0ff', '#8a4aff'], bloodorb: ['#ff8a9a', '#c0142c'], water: ['#e8faff', '#5ab8f0'], soul: ['#e8fff8', '#9ad8d0'], magic: ['#ffffff'], bolt: ['#fff6a0', '#ffffff'], spark: ['#ffffff'], thorn: ['#a0e070'], leaf: ['#a0e070'], sand: ['#f4dc78'], candy: ['#ffffff', '#e0245e'], star: ['#ffffff'], crow: ['#22222c'], bat: ['#6a2a44'], present: ['#ffd23f'] };
+export function pixelTrail(x, y, kind, color) {
+  const c = TRAIL[kind]; if (!c && !['orb', 'gel', 'beam', 'bfg', 'shard'].includes(kind)) return;
+  const col = c ? c[Math.floor(Math.random() * c.length)] : (color || '#ffffff');
+  P.push({ k: 'dot', x: x + (Math.random() - 0.5) * 6, y: y + (Math.random() - 0.5) * 6, vx: (Math.random() - 0.5) * 24, vy: (Math.random() - 0.5) * 24 - 8, life: 0.28, max: 0.28, size: 3 + Math.random() * 3, color: col, drag: 2 });
 }

@@ -60,4 +60,42 @@ for (const [id, list] of Object.entries(RARE)) {
   m.drops.push({ item: 'coin', min: 1 + Math.floor((m.xp || 5) * 0.3), max: 2 + Math.floor((m.xp || 5) * 0.7) });
 }
 mobs.slime.drops.push({ item: 'rubber_duck_blaster', chance: 0.002 });
+// ---- merge the new roster; harden the old late-game mobs; give everybody an ability kit (no telegraphs for normal mobs)
+const { M: NEW, P } = require('./mobs_new');
+Object.assign(mobs, NEW);
+const kit = (id, extra) => Object.assign(mobs[id], extra);
+kit('lava_imp', { hp: 170, dmg: 20, abilities: [{ type: 'blink', cd: 6, dist: 300, range: 280 }, { type: 'burst', cd: 8, count: 10, range: 300, proj: P('fire', 320, 18, '#ff7a1a', { life: 1.1 }) }] });
+kit('magma_golem', { hp: 760, dmg: 46, xp: 150, abilities: [{ type: 'burst', cd: 6, count: 12, range: 340, proj: P('fire', 330, 24, '#ff7a1a', { life: 1.2 }) }, { type: 'dash', cd: 8, speed: 2.8, dur: 0.5, range: 360 }] });
+kit('wyvern', { hp: 950, dmg: 52, abilities: [{ type: 'dash', cd: 5, speed: 3.4, dur: 0.5, range: 520 }, { type: 'burst', cd: 8, count: 12, range: 420, proj: P('fire', 360, 24, '#ff5a1a') }] });
+kit('shadow_wraith', { hp: 260, dmg: 30, abilities: [{ type: 'blink', cd: 5, dist: 280, range: 260 }, { type: 'shoot', cd: 4, count: 2, spread: 0.3, range: 520, proj: P('soul', 420, 20, '#9a6aff', { beh: 'homing', turn: 2.4, life: 1.6 }) }] });
+kit('bog_witch', { hp: 210, behavior: 'ranged', ranged: { keep: 380, range: 640, cd: 2.2, proj: P('poison', 360, 14, '#7bff5a', { beh: 'wave', amp: 26, freq: 7, life: 1.8, fx: { poison: { dps: 5, dur: 4 } } }) },
+  abilities: [
+    { type: 'shoot', cd: 4.5, count: 3, spread: 0.45, range: 620, proj: P('poison', 340, 14, '#7bff5a', { beh: 'wave', amp: 22, freq: 6, fx: { poison: { dps: 5, dur: 4 } } }) },
+    { type: 'shoot', cd: 6, count: 1, range: 560, proj: P('void', 520, 16, '#b06aff', { radius: 10, fx: { slow: { mult: 0.45, dur: 2.5 } } }) },
+    { type: 'summon', cd: 13, mob: 'toad', n: 2, range: 560 },
+    { type: 'burst', cd: 9, count: 12, range: 240, proj: P('poison', 300, 12, '#7bff5a', { life: 1.1, fx: { poison: { dps: 4, dur: 3 } } }) },
+    { type: 'blink', cd: 7, dist: 330, range: 220 }] });
+kit('skeleton', { hp: 90, ranged: { keep: 360, range: 660, cd: 1.9, windup: 0, proj: P('arrow', 560, 11, '#d8c8a0', { life: 1.3, radius: 6 }) }, abilities: [{ type: 'shoot', cd: 6, count: 3, spread: 0.45, range: 600, proj: P('arrow', 580, 9, '#d8c8a0', { radius: 6 }) }] });
+for (const id of ['wolf', 'frost_wolf']) kit(id, { abilities: [{ type: 'dash', cd: 4.5, speed: 3.4, dur: 0.4, range: 360 }] });
+kit('goblin', { abilities: [{ type: 'dash', cd: 5, speed: 3, dur: 0.35, range: 300 }] });
+kit('spider', { abilities: [{ type: 'shoot', cd: 6, count: 1, range: 440, proj: P('gel', 420, 8, '#e8e8f0', { fx: { slow: { mult: 0.4, dur: 2.5 } } }) }, { type: 'leap', cd: 4, speed: 3.4, dur: 0.35, range: 300 }] });
+kit('bandit', { abilities: [{ type: 'shoot', cd: 5, count: 3, spread: 0.35, range: 460, proj: P('star', 620, 12, '#d6dae2', { life: 0.9 }) }, { type: 'dash', cd: 6, speed: 3.2, dur: 0.4, range: 340 }] });
+kit('scorpion', { abilities: [{ type: 'shoot', cd: 5, count: 1, range: 440, proj: P('poison', 480, 14, '#b0a03a', { fx: { poison: { dps: 5, dur: 4 } } }) }, { type: 'dash', cd: 5, speed: 3.2, dur: 0.35, range: 320 }] });
+kit('mummy', { abilities: [{ type: 'shoot', cd: 6, count: 1, range: 480, proj: P('soul', 420, 16, '#e7dcb5', { fx: { slow: { mult: 0.55, dur: 2 } } }) }] });
+kit('yeti', { abilities: [{ type: 'burst', cd: 6, count: 7, range: 300, proj: P('ice', 340, 18, '#bff3ff', { life: 1 }) }, { type: 'dash', cd: 7, speed: 3, dur: 0.45, range: 340 }] });
+kit('demon_eye', { abilities: [{ type: 'dash', cd: 2.8, speed: 4, dur: 0.35, range: 420 }] });
+kit('zombie', { abilities: [{ type: 'dash', cd: 7, speed: 2.8, dur: 0.4, range: 280 }] });
+const RARE2 = {
+  giant_hornet: ['hornet_stinger'], jungle_viper: ['viper_fang'], tribal_hunter: ['hunter_spear'], jungle_golem: ['jungle_maul', 'pal_jadeling'], treant: ['heartwood_bow'], dire_wolf: ['mount_dire_wolf'],
+  sand_elemental: ['dune_scepter'], tomb_guardian: ['guardian_axe', 'mount_magic_carpet'], vulture: [], hellhound: ['hellhound_fang'], fire_elemental: ['cinder_staff', 'pal_emberpup'], bone_drake: ['drake_tooth'], pit_demon: ['demon_cleaver'],
+  leech: ['leech_whip'], plague_zombie: ['plague_hammer'], banshee: ['banshee_tome'], gargoyle: ['gargoyle_axe', 'pal_voidmote'], vampire_bat: ['bat_wing_scythe'], death_knight: ['requiem_blade'],
+  ice_elemental: ['icicle_staff', 'pal_frostling'], frost_giant: ['giants_club'], harpy: ['harpy_bow'], rock_golem: ['boulder_fist', 'pal_rocklet'], crystal_golem: ['prism_staff'], storm_drake: ['stormcaller_bow'],
+  blood_zombie: ['blood_butcherer'], blood_eye: ['eye_launcher'],
+};
+for (const [id, list] of Object.entries(RARE2)) for (const it of list) mobs[id].drops.push({ item: it, chance: it.startsWith('pal_') || it.startsWith('mount_') ? 0.004 : 0.012 });
+for (const id of Object.keys(NEW)) if (!mobs[id].drops.some((d) => d.item === 'coin')) mobs[id].drops.push({ item: 'coin', min: 2 + Math.floor(mobs[id].xp * 0.25), max: 4 + Math.floor(mobs[id].xp * 0.6) });
+mobs.bog_witch.drops.push({ item: 'mount_witch_broom', chance: 0.005 });
+mobs.cow.drops.push({ item: 'pal_rocklet', chance: 0.001 });
+Object.assign(mobs, require('./mobs_extra'));
+for (const k of Object.keys(mobs)) if (mobs[k].drops) mobs[k].drops = mobs[k].drops.filter((d) => !String(d.item).startsWith('pal_'));
 module.exports = mobs;

@@ -2,9 +2,9 @@
 module.exports = {
   GAME_NAME: 'Realmforge',
   PORT: process.env.PORT || 3000,
-  TICK_RATE: 30,
+  TICK_RATE: parseInt(process.env.TICK_RATE || '30', 10),   // on a weak host (Render free tier) set TICK_RATE=20
   WORLD_SIZE: 24000,
-  SEED: process.env.WORLD_SEED ? parseInt(process.env.WORLD_SEED, 10) : Math.floor(Math.random() * 90000) + 1000,
+  SEED: process.env.WORLD_SEED ? parseInt(process.env.WORLD_SEED, 10) : 1337,   // fixed: the map is identical for everyone, every restart
   VIEW_RADIUS: 1200,
   MAX_PLAYERS: 80,
   RESOURCE_CELL: 190,        // resources are placed on a jittered grid -> evenly spread, never stacked
@@ -16,6 +16,7 @@ module.exports = {
   },
   SAFE_RADIUS: 500,        // no PvP / mob aggro around world center
   PVP: true,
+  EXCALIBUR_CHANCE: 0.0001,   // chance that a generated boulder hides Excalibur-ish (0.01%)
   BUILD_RANGE: 260, CRAFT_RANGE: 200, MAX_STRUCTS_PER_PLAYER: 90,
   DAY_LENGTH: 480,         // seconds for a full day/night cycle
   MOBS_PER_PLAYER: 5,

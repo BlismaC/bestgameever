@@ -1,7 +1,7 @@
 // Harvestable world nodes. tierReq = minimum tool tier (material tier of weapon) to get drops.
 // shape: tree | rock | ore | bush | cactus | crystal   (renderer is data-driven by shape+colors)
 const ore = (id, name, item, tierReq, color, extra = {}) => ({
-  name, kind: 'ore', shape: 'ore', hp: 70 + tierReq * 25, radius: 32, tierReq, respawn: 90 + tierReq * 30,
+  name, kind: 'ore', shape: 'ore', hp: 80 + tierReq * 70, radius: 32, tierReq, respawn: 110 + tierReq * 60,
   color: '#7d828c', color2: color, drops: [{ item, min: 1, max: 2 }], ...extra,
 });
 module.exports = {
@@ -24,10 +24,20 @@ module.exports = {
   sapphire_ore: ore('sapphire_ore', 'Sapphire Ore', 'sapphire', 3, '#2f6bff', { minZone: 0.35 }),
   emerald_ore:  ore('emerald_ore', 'Emerald Ore', 'emerald', 3, '#1fcf7a', { minZone: 0.3 }),
   amethyst_ore: ore('amethyst_ore', 'Amethyst Ore', 'amethyst', 3, '#a45cff', { minZone: 0.3 }),
-  titanium_ore: ore('titanium_ore', 'Titanium Ore', 'titanium', 4, '#c9d4de', { minZone: 0.6 }),
-  mythril_ore:  ore('mythril_ore', 'Mythril Ore', 'mythril', 4, '#6ff0e0', { minZone: 0.72 }),
+  titanium_ore: ore('titanium_ore', 'Titanium Ore', 'titanium', 4, '#c9d4de', { minZone: 0.62 }),
+  mythril_ore:  ore('mythril_ore', 'Mythril Ore', 'mythril', 5, '#6ff0e0', { minZone: 0.78 }),
 
-  // Easter egg: a sword stuck in a stone. Keep hitting it...
-  stone_with_sword: { name: 'Sword in the Stone', kind: 'rock', shape: 'rock', hp: 400, radius: 36, tierReq: 0, respawn: 600, color: '#9aa0ab', color2: '#ffe27a',
-    drops: [{ item: 'stone', min: 1, max: 1 }, { item: 'excalibur_ish', min: 1, max: 1, chance: 0.04 }] },
+  palm_tree:   { name: 'Palm Tree', kind: 'tree', shape: 'tree', hp: 30, radius: 30, tierReq: 0, respawn: 60, color: '#4aa83a', color2: '#8a6a40', drops: [{ item: 'wood', min: 1, max: 2 }] },
+  jungle_tree: { name: 'Jungle Tree', kind: 'tree', shape: 'tree', hp: 36, radius: 36, tierReq: 0, respawn: 60, color: '#1f8a3a', color2: '#5a4020', drops: [{ item: 'wood', min: 1, max: 3 }, { item: 'jungle_fruit', min: 1, max: 1, chance: 0.12 }] },
+  blight_tree: { name: 'Blighted Tree', kind: 'tree', shape: 'tree', hp: 36, radius: 34, tierReq: 0, respawn: 70, color: '#5a4a6a', color2: '#2a2030', drops: [{ item: 'wood', min: 1, max: 2 }] },
+  mushroom_cluster: { name: 'Glowcap Cluster', kind: 'bush', shape: 'bush', hp: 18, radius: 22, tierReq: 0, respawn: 50, solid: false, color: '#3a6a8a', color2: '#7ad0ff', drops: [{ item: 'mushroom', min: 1, max: 3 }] },
+  bone_pile:   { name: 'Bone Pile', kind: 'rock', shape: 'rock', hp: 40, radius: 30, tierReq: 0, respawn: 90, color: '#d8d2bc', color2: '#f0ead8', drops: [{ item: 'bone', min: 2, max: 4 }, { item: 'coin', min: 2, max: 9, chance: 0.4 }] },
+  tombstone:   { name: 'Tombstone', kind: 'rock', shape: 'rock', hp: 70, radius: 32, tierReq: 0, respawn: 120, color: '#6a6f78', color2: '#8a8f98', drops: [{ item: 'stone', min: 1, max: 2 }, { item: 'bone', min: 0, max: 2, chance: 0.5 }, { item: 'ectoplasm', min: 1, max: 1, chance: 0.08 }] },
+  coral_rock:  { name: 'Coral Reef', kind: 'rock', shape: 'rock', hp: 90, radius: 34, tierReq: 1, respawn: 120, color: '#ff7a8a', color2: '#ffc0c8', drops: [{ item: 'coral_shard', min: 1, max: 2 }] },
+  kelp:        { name: 'Kelp Forest', kind: 'bush', shape: 'bush', hp: 16, radius: 22, tierReq: 0, respawn: 40, solid: false, color: '#2f8a5a', color2: '#7ad0a0', drops: [{ item: 'kelp', min: 1, max: 3 }] },
+  pearl_clam:  { name: 'Giant Clam', kind: 'ore', shape: 'rock', hp: 240, radius: 30, tierReq: 2, respawn: 240, color: '#cfc0d8', color2: '#f4f0ff', drops: [{ item: 'pearl', min: 1, max: 1 }, { item: 'coin', min: 10, max: 40 }] },
+  cobalt_ore:  ore('cobalt_ore', 'Cobalt Ore', 'cobalt', 2, '#2a56c8', { minZone: 0.3 }),
+  crystal_cluster: { name: 'Crystal Cluster', kind: 'ore', shape: 'crystal', hp: 260, radius: 34, tierReq: 3, respawn: 220, minZone: 0.5, color: '#c8a0ff', color2: '#f0e0ff', drops: [{ item: 'crystal', min: 1, max: 2 }] },
+  bloodstone_ore: ore('bloodstone_ore', 'Bloodstone Ore', 'bloodstone', 4, '#c01030', { minZone: 0.6 }),
+  starmetal_ore:  ore('starmetal_ore', 'Starmetal Ore', 'starmetal', 5, '#a0b8ff', { minZone: 0.72 }),
 };

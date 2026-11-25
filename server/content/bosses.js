@@ -1,7 +1,7 @@
 // Bosses. Gentler early game, bigger later. Every boss has a unique drop table.
 // Patterns: charge | aim | burst | spiral | summon | slam.  tele = seconds the boss stands still, WARNING you (arrows/rings) before the attack lands.
 // Bosses are called by random events (events.js) or by crafted summon items. natural:true bosses may very rarely roam into view.
-module.exports = {
+const B = {
   slime_king: { name: 'Slime King', emoji: '👑', color: '#4f8fe0', radius: 80, hp: 700, speed: 80, dmg: 10, xp: 200, boss: true,
     patterns: [{ type: 'charge', cd: 7, dur: 0.9, speed: 3, tele: 1.1 }, { type: 'summon', cd: 10, mob: 'slime', n: 2 }],
     phases: [0.5],
@@ -63,3 +63,24 @@ module.exports = {
     drops: [{ item: 'coin', min: 300, max: 500 }, { item: 'moo_stick', chance: 0.6 }, { item: 'meat', min: 30, max: 50 }, { item: 'bovine_bonker', chance: 1 }],
     summon: null },
 };
+
+Object.assign(B, require('./bosses_extra'));
+// ---- difficulty pass: only HEAVY attacks are telegraphed (charges, slams, spirals, huge bursts); fast shots and summons are not.
+// Phase 2+ (phases[] thresholds) enrage: faster, more attacks. Phase-gated patterns carry `phase: n`.
+for (const [id, d] of Object.entries(B)) {
+  d.hp = Math.round(d.hp * 1.35); d.dmg = Math.round(d.dmg * 1.15);
+  for (const p of d.patterns) {
+    if (p.type === 'aim' || p.type === 'summon') delete p.tele;
+    else if (p.type === 'burst' && (p.count || 12) <= 16) delete p.tele;
+  }
+  let base = d.patterns.find((p) => p.type === 'aim') || d.patterns.find((p) => p.type === 'burst');
+  if (!base) { base = { speed: 360, life: 1.8, radius: 11, dmg: Math.round(d.dmg * 0.8), kind: id === 'slime_king' ? 'gel' : 'orb', color: d.color, cd: 3.4, count: 1, spread: 0.2 }; d.patterns.push({ ...base, type: 'aim' }); }
+  const proj = { speed: base.speed, life: base.life, radius: base.radius, dmg: base.dmg, kind: base.kind, color: base.color, fx: base.fx };
+  d.patterns.push({ ...proj, type: 'aim', cd: Math.max(1.3, base.cd * 0.7), count: 5, spread: 0.9, phase: 1, dmg: Math.round(base.dmg * 1.15) });
+  d.patterns.push({ ...proj, type: 'burst', cd: base.cd * 1.4, count: 22, phase: 1, speed: base.speed * 1.05 });
+  d.patterns.push({ ...proj, type: 'spiral', cd: 11, dur: 3.2, count: 3, phase: 2, tele: 0.9, speed: base.speed * 1.1 });
+  d.patterns.push({ type: 'charge', cd: 7, dur: 0.9, speed: 4, phase: 2, tele: 0.8 });
+  if (d.summon === undefined) d.summon = null;
+  d.trophy = true;
+}
+module.exports = B;
